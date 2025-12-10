@@ -65,47 +65,51 @@ function loadJSON(filePath) {
 
 async function migrateData() {
   try {
-    const userCount = await User.countDocuments();
-    const songCount = await Song.countDocuments();
-
-    if (userCount > 0 && songCount > 0) {
-      process.stdout.write(`✅ Data exists\n`);
-      return;
-    }
+    // FORCE DELETE AND RECREATE
+    process.stdout.write('🔄 Clearing existing data...\n');
+    await User.deleteMany({});
+    await Song.deleteMany({});
+    await Playlist.deleteMany({});
 
     process.stdout.write(`📥 Migrating data...\n`);
 
     const users = loadJSON(path.join(__dirname, 'users.json'));
     if (users.length > 0) {
       try {
-        await User.insertMany(users, { ordered: false });
-        process.stdout.write(`✅ ${users.length} users migrated\n`);
+        const inserted = await User.insertMany(users);
+        process.stdout.write(`✅ ${inserted.length} users inserted\n`);
       } catch (err) {
-        // Ignore duplicates
+        process.stdout.write(`⚠️ User insert error: ${err.message}\n`);
       }
     }
 
     const songs = loadJSON(path.join(__dirname, 'songs.json'));
     if (songs.length > 0) {
       try {
-        await Song.insertMany(songs, { ordered: false });
-        process.stdout.write(`✅ ${songs.length} songs migrated\n`);
+        const inserted = await Song.insertMany(songs);
+        process.stdout.write(`✅ ${inserted.length} songs inserted\n`);
       } catch (err) {
-        // Ignore duplicates
+        process.stdout.write(`⚠️ Song insert error: ${err.message}\n`);
       }
     }
 
     const playlists = loadJSON(path.join(__dirname, 'playlists.json'));
     if (playlists.length > 0) {
       try {
-        await Playlist.insertMany(playlists, { ordered: false });
-        process.stdout.write(`✅ ${playlists.length} playlists migrated\n`);
+        const inserted = await Playlist.insertMany(playlists);
+        process.stdout.write(`✅ ${inserted.length} playlists inserted\n`);
       } catch (err) {
-        // Ignore duplicates
+        process.stdout.write(`⚠️ Playlist insert error: ${err.message}\n`);
       }
     }
+
+    // Verify
+    const userCount = await User.countDocuments();
+    const songCount = await Song.countDocuments();
+    process.stdout.write(`✅ Final count: ${userCount} users, ${songCount} songs\n`);
+
   } catch (err) {
-    process.stderr.write(`⚠️ Migration error: ${err.message}\n`);
+    process.stderr.write(`❌ Migration failed: ${err.message}\n`);
   }
 }
 
