@@ -584,17 +584,29 @@ app.post('/init-defaults', async (req, res) => {
 
 // === ERROR HANDLING ===
 
-// 404 handler
+// 404 handler - must be after all routes
 app.use((req, res) => {
-    console.log(`⚠️  404 Not Found: ${req.method} ${req.path}`);
-    if (req.path.startsWith('/api') || req.path.startsWith('/auth') || req.path.startsWith('/songs') || req.path.startsWith('/users')) {
-        return res.status(404).json({ success: false, message: 'Route not found' });
+    try {
+        // API routes return JSON
+        if (req.path.startsWith('/api') || req.path.startsWith('/auth') || req.path.startsWith('/songs') || req.path.startsWith('/users') || req.path.startsWith('/playlists') || req.path.startsWith('/artists') || req.path.startsWith('/genres') || req.path.startsWith('/posts') || req.path.startsWith('/notifications')) {
+            return res.status(404).json({ success: false, message: 'Route not found' });
+        }
+        
+        // Try to serve index.html
+        const indexPath = path.join(__dirname, 'index.html');
+        if (fs.existsSync(indexPath)) {
+            res.setHeader('Content-Type', 'text/html; charset=utf-8');
+            res.send(fs.readFileSync(indexPath, 'utf8'));
+        } else {
+            res.status(404).send('<h1>404 - Page not found</h1><p>index.html not found</p>');
+        }
+    } catch (err) {
+        console.error('❌ 404 handler error:', err);
+        res.status(500).json({ success: false, error: 'Server error' });
     }
-    // Serve index.html for SPA routing
-    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Error handler
+// Error handler - must be last
 app.use((err, req, res, next) => {
     console.error('❌ Error:', err);
     res.status(err.status || 500).json({
