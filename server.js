@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
+const axios = require('axios');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -417,27 +418,24 @@ app.post('/songs', (req, res) => {
                         const buffer = Buffer.from(base64, 'base64');
                         console.log(`📊 Audio size: ${(buffer.length/1024/1024).toFixed(2)} MB`);
 
-                        // Upload vers Cloudinary (unsigned preset)
+                        // Upload vers Cloudinary avec axios et base64
                         try {
-                            const result = await new Promise((resolve, reject) => {
-                                const uploadStream = cloudinary.uploader.unsigned_upload_stream(
-                                    'spider-music', // preset name
-                                    {
-                                        resource_type: 'video',
-                                        public_id: `song-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-                                    },
-                                    (error, result) => {
-                                        if (error) reject(error);
-                                        else resolve(result);
-                                    }
-                                );
-                                uploadStream.end(buffer);
-                            });
-
-                            songData.src = result.secure_url;
-                            console.log(`☁️ File uploaded to Cloudinary: ${result.secure_url}`);
+                            const axios = require('axios');
+                            const base64Audio = buffer.toString('base64');
+                            
+                            const response = await axios.post(
+                                `https://api.cloudinary.com/v1_1/dvtkoyj0w/video/upload`,
+                                {
+                                    file: `data:audio/mpeg;base64,${base64Audio}`,
+                                    api_key: process.env.CLOUDINARY_API_KEY || '741567951621919',
+                                    folder: 'spider-music'
+                                }
+                            );
+                            
+                            songData.src = response.data.secure_url;
+                            console.log(`☁️ File uploaded to Cloudinary: ${response.data.secure_url}`);
                         } catch (cloudinaryError) {
-                            console.error('❌ Cloudinary upload error:', cloudinaryError);
+                            console.error('❌ Cloudinary upload error:', cloudinaryError.message);
                             // Fallback: stockage local temporaire
                             const uploadDir = path.join(__dirname, 'uploads', 'audio');
                             if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
@@ -453,6 +451,7 @@ app.post('/songs', (req, res) => {
                             const filePath = path.join(uploadDir, filename);
                             fs.writeFileSync(filePath, buffer);
                             songData.src = `/uploads/audio/${filename}`;
+                            console.log(`⚠️ Fallback to local storage: ${filename}`);
                             console.log(`⚠️ Fallback to local storage: ${filename}`);
                         }
                     } else {
