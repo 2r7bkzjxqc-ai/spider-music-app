@@ -8,8 +8,9 @@ const cloudinary = require('cloudinary').v2;
 const fs = require('fs');
 require('dotenv').config();
 
-// Import models
+// Import models and auth helpers
 const { User, Song, Playlist, Artist, Post, Notification, Genre } = require('./models');
+const { hashPassword, verifyPassword, cleanUserData } = require('./utils/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -64,9 +65,9 @@ const upload = multer({ storage, fileFilter });
 app.post('/auth/login', async (req, res) => {
     try {
         const { username, password } = req.body;
-        const user = await User.findOne({ username, password });
+        const user = await User.findOne({ username });
         
-        if (user) {
+        if (user && verifyPassword(password, user.password)) {
             user.isOnline = true;
             await user.save();
             res.json({ 
@@ -96,7 +97,7 @@ app.post('/auth/register', async (req, res) => {
         
         const newUser = new User({
             username,
-            password,
+            password: hashPassword(password), // Hash le mot de passe
             role: 'user',
             avatar: '',
             banner: '',
@@ -116,7 +117,9 @@ app.post('/auth/register', async (req, res) => {
 app.get('/users', async (req, res) => {
     try {
         const users = await User.find();
-        res.json(users);
+        // Ne jamais envoyer les mots de passe
+        const cleanedUsers = users.map(user => cleanUserData(user));
+        res.json(cleanedUsers);
     } catch (err) {
         console.error('❌ Error fetching users:', err);
         res.status(500).json({ error: 'Server error' });
@@ -131,8 +134,9 @@ app.get('/users/profile/:username', async (req, res) => {
         }
         
         const userPlaylists = await Playlist.find({ owner: user.username });
+        const cleanedUser = cleanUserData(user);
         res.json({ 
-            ...user.toObject(), 
+            ...cleanedUser, 
             playlists: userPlaylists, 
             followers: user.followers || [], 
             following: user.following || [] 

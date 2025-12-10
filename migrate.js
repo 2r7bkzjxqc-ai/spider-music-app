@@ -4,6 +4,7 @@ const path = require('path');
 require('dotenv').config();
 
 const { User, Song, Playlist, Artist, Post, Notification, Genre } = require('./models');
+const { hashPassword } = require('./utils/auth');
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/spider-music';
 
@@ -76,7 +77,7 @@ async function migrateData() {
                     { username: userData.username },
                     {
                         username: userData.username,
-                        password: userData.password,
+                        password: hashPassword(userData.password), // Hash les anciens mots de passe
                         role: userData.role || 'user',
                         avatar: userData.avatar || '',
                         banner: userData.banner || '',
