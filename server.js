@@ -720,6 +720,21 @@ app.post('/init-defaults', async (req, res) => {
     }
 });
 
+// --- ERROR HANDLING MIDDLEWARE ---
+app.use((err, req, res, next) => {
+    console.error('❌ Express error:', err);
+    res.status(err.status || 500).json({ 
+        success: false, 
+        error: err.message || 'Internal Server Error' 
+    });
+});
+
+// 404 handler
+app.use((req, res) => {
+    console.log(`⚠️  404 Not Found: ${req.method} ${req.path}`);
+    res.status(404).json({ success: false, message: 'Route not found' });
+});
+
 // START SERVER
 async function startServer() {
     try {
@@ -754,9 +769,22 @@ async function startServer() {
 
         // Démarrer le serveur
         const HOST = '0.0.0.0';
-        app.listen(PORT, HOST, () => {
+        const server = app.listen(PORT, HOST, () => {
             console.log(`🚀 Server running on http://${HOST}:${PORT}`);
             console.log(`📡 MongoDB: ${MONGODB_URI}`);
+        });
+
+        // Global error handler for uncaught exceptions
+        process.on('uncaughtException', (err) => {
+            console.error('❌ Uncaught Exception:', err);
+        });
+
+        process.on('unhandledRejection', (reason, promise) => {
+            console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+        });
+
+        server.on('error', (err) => {
+            console.error('❌ Server error:', err);
         });
     } catch (err) {
         console.error('❌ Server startup error:', err.message);
