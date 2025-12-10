@@ -661,7 +661,21 @@ async function likeSongHandler(req, res) {
   }
 }
 
-// SERVE AUDIO FILES
+// SERVE AUDIO FILES - Direct route
+app.get('/audio/:filename', (req, res) => {
+  try {
+    const filePath = path.join(__dirname, 'uploads', 'audio', req.params.filename);
+    if (fs.existsSync(filePath)) {
+      res.sendFile(filePath);
+    } else {
+      res.status(404).json({ error: 'File not found' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// SERVE AUDIO FILES - Legacy path
 app.use('/uploads/audio', express.static(path.join(__dirname, 'uploads', 'audio')));
 
 // SERVE STATIC FILES
