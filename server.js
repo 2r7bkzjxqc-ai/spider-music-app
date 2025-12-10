@@ -584,6 +584,23 @@ app.post('/init-defaults', async (req, res) => {
 
 // === ERROR HANDLING ===
 
+// Root route - serve index.html or simple test
+app.get('/', (req, res) => {
+    try {
+        const indexPath = path.join(__dirname, 'index.html');
+        if (fs.existsSync(indexPath)) {
+            const content = fs.readFileSync(indexPath, 'utf8');
+            res.setHeader('Content-Type', 'text/html; charset=utf-8');
+            res.send(content);
+        } else {
+            res.send('<h1>Spider Music</h1><p>App is running but index.html not found</p>');
+        }
+    } catch (err) {
+        console.error('❌ Error serving root:', err);
+        res.status(500).send('<h1>Error</h1><p>' + err.message + '</p>');
+    }
+});
+
 // 404 handler - must be after all routes
 app.use((req, res) => {
     try {
@@ -592,13 +609,14 @@ app.use((req, res) => {
             return res.status(404).json({ success: false, message: 'Route not found' });
         }
         
-        // Try to serve index.html
+        // Try to serve index.html for other routes
         const indexPath = path.join(__dirname, 'index.html');
         if (fs.existsSync(indexPath)) {
+            const content = fs.readFileSync(indexPath, 'utf8');
             res.setHeader('Content-Type', 'text/html; charset=utf-8');
-            res.send(fs.readFileSync(indexPath, 'utf8'));
+            res.send(content);
         } else {
-            res.status(404).send('<h1>404 - Page not found</h1><p>index.html not found</p>');
+            res.status(404).send('<h1>404 - Not Found</h1>');
         }
     } catch (err) {
         console.error('❌ 404 handler error:', err);
