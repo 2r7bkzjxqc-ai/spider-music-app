@@ -6,7 +6,7 @@ const path = require('path');
 const multer = require('multer');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(bodyParser.json({ limit: '2gb' }));
@@ -753,6 +753,7 @@ if (!fs.existsSync(FILES.GENRES)) save(FILES.GENRES, MOCK_DATA.GENRES);
 if (!fs.existsSync(FILES.NOTIFICATIONS)) save(FILES.NOTIFICATIONS, MOCK_DATA.NOTIFICATIONS);
 if (!fs.existsSync(FILES.POSTS)) save(FILES.POSTS, MOCK_DATA.POSTS);
 
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+const HOST = '0.0.0.0';
+app.listen(PORT, HOST, () => {
+    console.log(`Server running on http://${HOST}:${PORT}`);
 });
