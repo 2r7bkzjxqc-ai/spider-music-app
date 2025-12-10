@@ -741,10 +741,21 @@ app.use((err, req, res, next) => {
     });
 });
 
-// 404 handler
+// 404 handler - catch all unhandled routes
 app.use((req, res) => {
-    console.log(`⚠️  404 Not Found: ${req.method} ${req.path}`);
-    res.status(404).json({ success: false, message: 'Route not found' });
+    try {
+        console.log(`⚠️  404 Not Found: ${req.method} ${req.path}`);
+        // If it's an API request, return JSON
+        if (req.path.startsWith('/api') || req.path.startsWith('/auth') || req.path.startsWith('/songs') || req.path.startsWith('/users')) {
+            return res.status(404).json({ success: false, message: 'Route not found' });
+        }
+        // Otherwise, serve index.html for SPA routing
+        const indexPath = path.join(__dirname, 'index.html');
+        res.sendFile(indexPath);
+    } catch (err) {
+        console.error('❌ Error in 404 handler:', err);
+        res.status(500).json({ success: false, error: 'Server error' });
+    }
 });
 
 // START SERVER
