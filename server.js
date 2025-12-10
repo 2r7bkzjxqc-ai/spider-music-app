@@ -4,23 +4,23 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// --- CONFIGURATION CLOUDINARY ---
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'ddedggf4a',
+    api_key: process.env.CLOUDINARY_API_KEY || '899516586614565',
+    api_secret: process.env.CLOUDINARY_API_SECRET || ''
+});
+
 app.use(cors());
 app.use(bodyParser.json({ limit: '2gb' }));
 
-// --- CONFIGURATION MULTER POUR UPLOADS ---
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, path.join(__dirname, 'uploads', 'audio'));
-    },
-    filename: (req, file, cb) => {
-        const uniqueName = Date.now() + '-' + Math.random().toString(36).substr(2, 9) + path.extname(file.originalname);
-        cb(null, uniqueName);
-    }
-});
+// --- CONFIGURATION MULTER POUR UPLOADS (Stockage en mémoire pour Cloudinary) ---
+const storage = multer.memoryStorage();
 
 // Filtrer pour n'accepter que les fichiers audio
 const fileFilter = (req, file, cb) => {
@@ -567,13 +567,32 @@ app.post('/albums/:albumName/like', (req, res) => {
 app.get('/artists', (req, res) => res.json(artists));
 
 // UPLOAD ENDPOINT POUR FICHIERS AUDIO
-app.post('/upload-audio', upload.single('audioFile'), (req, res) => {
+app.post('/upload-audio', upload.single('audioFile'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: 'No file uploaded' });
         }
-        const filePath = `/uploads/audio/${req.file.filename}`;
-        res.json({ success: true, filePath });
+
+        // Upload vers Cloudinary
+        const uploadStream = cloudinary.uploader.upload_stream(
+            {
+                resource_type: 'video', // Cloudinary utilise 'video' pour les fichiers audio
+                folder: 'spider-music',
+                public_id: `audio-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                format: path.extname(req.file.originalname).substring(1) // Enlève le point
+            },
+            (error, result) => {
+                if (error) {
+                    console.error('Cloudinary upload error:', error);
+                    return res.status(500).json({ success: false, message: 'Upload to Cloudinary failed' });
+                }
+                // Retourne l'URL Cloudinary
+                res.json({ success: true, filePath: result.secure_url });
+            }
+        );
+
+        // Envoie le buffer vers Cloudinary
+        uploadStream.end(req.file.buffer);
     } catch (error) {
         console.error('Upload error:', error);
         res.status(500).json({ success: false, message: 'Upload failed' });
