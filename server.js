@@ -23,11 +23,26 @@ cloudinary.config({
 });
 
 // --- CONFIGURATION MONGOOSE ---
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/spider-music';
+const MONGODB_URI = process.env.MONGODB_URI;
 
-mongoose.connect(MONGODB_URI)
+if (!MONGODB_URI) {
+    console.error('❌ MONGODB_URI environment variable is not set');
+    console.error('❌ Please add MONGODB_URI to Railway variables');
+    process.exit(1);
+}
+
+console.log('📡 Connecting to MongoDB Atlas...');
+mongoose.connect(MONGODB_URI, {
+    serverSelectionTimeoutMS: 10000,
+    socketTimeoutMS: 10000,
+    connectTimeoutMS: 10000,
+})
 .then(() => console.log('✅ MongoDB connected'))
-.catch(err => console.error('❌ MongoDB connection error:', err.message));
+.catch(err => {
+    console.error('❌ MongoDB connection error:', err.message);
+    console.error('❌ Ensure MONGODB_URI is correct in Railway variables');
+    process.exit(1);
+});
 
 // --- MIDDLEWARE ---
 app.use(cors());
