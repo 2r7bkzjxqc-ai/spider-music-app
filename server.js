@@ -46,9 +46,43 @@ const playlistSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const postSchema = new mongoose.Schema({
+  author: String,
+  content: String,
+  likes: [String],
+  comments: [String],
+  createdAt: { type: Date, default: Date.now }
+});
+
+const genreSchema = new mongoose.Schema({
+  name: String,
+  description: String,
+  createdAt: { type: Date, default: Date.now }
+});
+
+const artistSchema = new mongoose.Schema({
+  name: String,
+  avatar: String,
+  bio: String,
+  followers: [String],
+  createdAt: { type: Date, default: Date.now }
+});
+
+const notificationSchema = new mongoose.Schema({
+  user: String,
+  type: String,
+  message: String,
+  read: Boolean,
+  createdAt: { type: Date, default: Date.now }
+});
+
 const User = mongoose.model('User', userSchema);
 const Song = mongoose.model('Song', songSchema);
 const Playlist = mongoose.model('Playlist', playlistSchema);
+const Post = mongoose.model('Post', postSchema);
+const Genre = mongoose.model('Genre', genreSchema);
+const Artist = mongoose.model('Artist', artistSchema);
+const Notification = mongoose.model('Notification', notificationSchema);
 
 // ==================== HELPERS ====================
 
@@ -70,6 +104,10 @@ async function migrateData() {
     await User.deleteMany({});
     await Song.deleteMany({});
     await Playlist.deleteMany({});
+    await Post.deleteMany({});
+    await Genre.deleteMany({});
+    await Artist.deleteMany({});
+    await Notification.deleteMany({});
 
     process.stdout.write(`📥 Migrating data...\n`);
 
@@ -100,6 +138,46 @@ async function migrateData() {
         process.stdout.write(`✅ ${inserted.length} playlists inserted\n`);
       } catch (err) {
         process.stdout.write(`⚠️ Playlist insert error: ${err.message}\n`);
+      }
+    }
+
+    const posts = loadJSON(path.join(__dirname, 'posts.json'));
+    if (posts.length > 0) {
+      try {
+        const inserted = await Post.insertMany(posts);
+        process.stdout.write(`✅ ${inserted.length} posts inserted\n`);
+      } catch (err) {
+        process.stdout.write(`⚠️ Post insert error: ${err.message}\n`);
+      }
+    }
+
+    const genres = loadJSON(path.join(__dirname, 'genres.json'));
+    if (genres.length > 0) {
+      try {
+        const inserted = await Genre.insertMany(genres);
+        process.stdout.write(`✅ ${inserted.length} genres inserted\n`);
+      } catch (err) {
+        process.stdout.write(`⚠️ Genre insert error: ${err.message}\n`);
+      }
+    }
+
+    const artists = loadJSON(path.join(__dirname, 'artists.json'));
+    if (artists.length > 0) {
+      try {
+        const inserted = await Artist.insertMany(artists);
+        process.stdout.write(`✅ ${inserted.length} artists inserted\n`);
+      } catch (err) {
+        process.stdout.write(`⚠️ Artist insert error: ${err.message}\n`);
+      }
+    }
+
+    const notifications = loadJSON(path.join(__dirname, 'notifications.json'));
+    if (notifications.length > 0) {
+      try {
+        const inserted = await Notification.insertMany(notifications);
+        process.stdout.write(`✅ ${inserted.length} notifications inserted\n`);
+      } catch (err) {
+        process.stdout.write(`⚠️ Notification insert error: ${err.message}\n`);
       }
     }
 
@@ -278,6 +356,72 @@ async function createPlaylistHandler(req, res) {
     const playlist = new Playlist(req.body);
     await playlist.save();
     res.json(playlist);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// GET POSTS
+app.get('/api/posts', postsHandler);
+app.get('/posts', postsHandler);
+
+async function postsHandler(req, res) {
+  try {
+    const posts = await Post.find().limit(500);
+    res.json(posts);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// GET GENRES
+app.get('/api/genres', genresHandler);
+app.get('/genres', genresHandler);
+
+async function genresHandler(req, res) {
+  try {
+    const genres = await Genre.find().limit(100);
+    res.json(genres);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// GET ARTISTS
+app.get('/api/artists', artistsHandler);
+app.get('/artists', artistsHandler);
+
+async function artistsHandler(req, res) {
+  try {
+    const artists = await Artist.find().limit(100);
+    res.json(artists);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// GET NOTIFICATIONS
+app.get('/api/notifications', notificationsHandler);
+app.get('/notifications', notificationsHandler);
+
+async function notificationsHandler(req, res) {
+  try {
+    const notifications = await Notification.find().limit(500);
+    res.json(notifications);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// GET USER PROFILE BY USERNAME
+app.get('/api/users/profile/:username', userProfileHandler);
+app.get('/users/profile/:username', userProfileHandler);
+
+async function userProfileHandler(req, res) {
+  try {
+    const user = await User.findOne({ username: req.params.username }).select('-password');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
