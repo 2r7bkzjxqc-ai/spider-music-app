@@ -1897,7 +1897,7 @@
     <script>
         // --- HELPER & CONSTANTS ---
         function safeEncode(str) { if (!str) return ""; return encodeURIComponent(str).replace(/'/g, "%27"); }
-        const ACTIVE_SERVER = "http://localhost:3000";
+        const ACTIVE_SERVER = window.location.origin;
         // --- 1. DEFAULT COVER CONSTANT ---
         const DEFAULT_COVER = "https://via.placeholder.com/300/121212/FFFFFF?text=No+Cover";
         
