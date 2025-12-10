@@ -778,13 +778,99 @@ async function startServer() {
         // Vérifier et migrer les données si nécessaire
         const existingUsers = await User.countDocuments();
         if (existingUsers === 0) {
-            console.log('🔄 No data in MongoDB. Attempting migration from JSON...');
+            console.log('🔄 No users in MongoDB. Attempting migration from JSON...');
             try {
-                require('./migrate.js');
-                // Attendre la migration
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                // Charger directement les données JSON
+                const loadJSON = (filePath) => {
+                    if (!fs.existsSync(filePath)) return [];
+                    try {
+                        return JSON.parse(fs.readFileSync(filePath, 'utf8')) || [];
+                    } catch (e) {
+                        console.warn(`⚠️  Error reading ${filePath}:`, e.message);
+                        return [];
+                    }
+                };
+
+                const dataDir = __dirname;
+                const users = loadJSON(path.join(dataDir, 'users.json'));
+                const artists = loadJSON(path.join(dataDir, 'artists.json'));
+                const songs = loadJSON(path.join(dataDir, 'songs.json'));
+                const playlists = loadJSON(path.join(dataDir, 'playlists.json'));
+                const genres = loadJSON(path.join(dataDir, 'genres.json'));
+                const posts = loadJSON(path.join(dataDir, 'posts.json'));
+                const notifications = loadJSON(path.join(dataDir, 'notifications.json'));
+
+                console.log(`📥 Loading ${users.length} users, ${songs.length} songs, ${playlists.length} playlists...`);
+
+                // Migrer les utilisateurs avec mots de passe hashés
+                for (const user of users) {
+                    await User.findOneAndUpdate(
+                        { username: user.username },
+                        {
+                            ...user,
+                            password: hashPassword(user.password)
+                        },
+                        { upsert: true }
+                    );
+                }
+
+                // Migrer les artistes
+                for (const artist of artists) {
+                    await Artist.findOneAndUpdate(
+                        { name: artist.name },
+                        artist,
+                        { upsert: true }
+                    );
+                }
+
+                // Migrer les chansons
+                for (const song of songs) {
+                    await Song.findOneAndUpdate(
+                        { title: song.title, artist: song.artist },
+                        song,
+                        { upsert: true }
+                    );
+                }
+
+                // Migrer les playlists
+                for (const playlist of playlists) {
+                    await Playlist.findOneAndUpdate(
+                        { name: playlist.name, owner: playlist.owner },
+                        playlist,
+                        { upsert: true }
+                    );
+                }
+
+                // Migrer les genres
+                for (const genre of genres) {
+                    await Genre.findOneAndUpdate(
+                        { name: genre.name || genre },
+                        { name: genre.name || genre },
+                        { upsert: true }
+                    );
+                }
+
+                // Migrer les posts
+                for (const post of posts) {
+                    await Post.findOneAndUpdate(
+                        { author: post.author, content: post.content },
+                        post,
+                        { upsert: true }
+                    );
+                }
+
+                // Migrer les notifications
+                for (const notif of notifications) {
+                    await Notification.findOneAndUpdate(
+                        { targetUser: notif.targetUser, message: notif.message },
+                        notif,
+                        { upsert: true }
+                    );
+                }
+
+                console.log('✅ Migration complete!');
             } catch (err) {
-                console.warn('⚠️ Migration error (continuing anyway):', err.message);
+                console.warn('⚠️  Migration error (continuing anyway):', err.message);
             }
         } else {
             console.log(`ℹ️  MongoDB already contains ${existingUsers} users. Skipping migration.`);
