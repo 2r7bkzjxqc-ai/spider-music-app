@@ -420,22 +420,26 @@ app.post('/songs', (req, res) => {
 
                         // Upload vers Cloudinary
                         try {
-                            const FormData = require('form-data');
-                            const form = new FormData();
+                            const tempFilePath = path.join(__dirname, 'temp', `temp-${Date.now()}.mp3`);
+                            const tempDir = path.join(__dirname, 'temp');
                             
-                            form.append('file', buffer, 'song.mp3');
-                            form.append('api_key', process.env.CLOUDINARY_API_KEY || '741567951621919');
+                            // Créer le répertoire temp
+                            if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
                             
-                            const response = await axios.post(
-                                `https://api.cloudinary.com/v1_1/${process.env.CLOUDINARY_CLOUD_NAME || 'spider-music'}/video/upload`,
-                                form,
-                                {
-                                    headers: form.getHeaders()
-                                }
-                            );
+                            // Écrire le buffer dans un fichier temporaire
+                            fs.writeFileSync(tempFilePath, buffer);
                             
-                            songData.src = response.data.secure_url;
-                            console.log(`☁️ File uploaded to Cloudinary: ${response.data.secure_url}`);
+                            // Uploader avec le SDK Cloudinary
+                            const result = await cloudinary.uploader.upload(tempFilePath, {
+                                resource_type: 'video',
+                                folder: 'spider-music'
+                            });
+                            
+                            // Supprimer le fichier temporaire
+                            fs.unlinkSync(tempFilePath);
+                            
+                            songData.src = result.secure_url;
+                            console.log(`☁️ File uploaded to Cloudinary: ${result.secure_url}`);
                         } catch (cloudinaryError) {
                             console.error('❌ Cloudinary upload error:', cloudinaryError.message);
                             // Fallback: stockage local temporaire
