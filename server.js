@@ -413,6 +413,9 @@ async function notificationsHandler(req, res) {
   }
 }
 
+// SERVE AUDIO FILES
+app.use('/uploads/audio', express.static(path.join(__dirname, 'uploads', 'audio')));
+
 // GET USER PROFILE BY USERNAME
 app.get('/api/users/profile/:username', userProfileHandler);
 app.get('/users/profile/:username', userProfileHandler);
