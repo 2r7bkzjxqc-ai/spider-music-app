@@ -36,15 +36,21 @@ if (!MONGODB_URI) {
 }
 
 console.log('📡 Connecting to MongoDB Atlas...');
+console.log('🔗 MongoDB URI configured (first 50 chars):', MONGODB_URI.substring(0, 50) + '...');
+
 mongoose.connect(MONGODB_URI, {
-    serverSelectionTimeoutMS: 10000,
-    socketTimeoutMS: 10000,
-    connectTimeoutMS: 10000,
+    serverSelectionTimeoutMS: 30000,  // 30 seconds
+    socketTimeoutMS: 30000,
+    connectTimeoutMS: 30000,
+    retryWrites: true,
+    w: 'majority'
 })
-.then(() => console.log('✅ MongoDB connected'))
+.then(() => {
+    console.log('✅ MongoDB connected successfully');
+})
 .catch(err => {
     console.error('❌ MongoDB connection error:', err.message);
-    console.error('❌ Ensure MONGODB_URI is correct in Railway variables');
+    console.error('❌ Stack:', err.stack);
     process.exit(1);
 });
 
@@ -53,6 +59,26 @@ app.use(cors());
 app.use(bodyParser.json({ limit: '2gb' }));
 app.use(express.static(__dirname));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Track MongoDB connection status
+let mongoConnected = false;
+mongoose.connection.on('connected', () => {
+    mongoConnected = true;
+    console.log('✅ MongoDB connection established');
+});
+mongoose.connection.on('disconnected', () => {
+    mongoConnected = false;
+    console.error('❌ MongoDB connection lost');
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.json({ 
+        status: 'ok', 
+        mongodb: mongoConnected ? 'connected' : 'disconnected',
+        timestamp: new Date().toISOString()
+    });
+});
 
 // --- MULTER CONFIGURATION ---
 const storage = multer.memoryStorage();
