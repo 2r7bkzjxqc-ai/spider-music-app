@@ -774,9 +774,5 @@ async function startServer() {
         process.exit(1);
     }
 }
-        console.error('❌ Server startup error:', err.message);
-        process.exit(1);
-    }
-}
 
 startServer();
