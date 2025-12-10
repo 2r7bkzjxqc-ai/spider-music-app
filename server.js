@@ -214,7 +214,7 @@ app.use((req, res) => {
 async function start() {
   try {
     // URI MongoDB - codée en dur (pas besoin de variables d'environnement!)
-    const MONGODB_URI = 'mongodb+srv://xdhnexvk_db_user:sMhQgR8RopAXJSIV%40@cluster0.bsyygmm.mongodb.net/spider-music?retryWrites=true&w=majority';
+    const MONGODB_URI = 'mongodb+srv://xdhnexvk_db_user:0LuFkTEqSbciy1GG@cluster0.bsyygmm.mongodb.net/spider-music?retryWrites=true&w=majority';
     
     console.log('🔗 Connecting to MongoDB...');
     await mongoose.connect(MONGODB_URI, {
