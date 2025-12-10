@@ -151,7 +151,7 @@ function createNotification(targetUser, message, sender = 'System') {
         timestamp: Date.now()
     };
     notifications.unshift(notif);
-    save(FILES.NOTIFICATIONS, notifications);
+    return save(FILES.NOTIFICATIONS, notifications);
 }
 
 // --- ROUTES ---
@@ -476,7 +476,7 @@ app.post('/songs', (req, res) => {
 
             // Save with try/catch to avoid crashing on huge JSON
             try {
-                save(FILES.SONGS, songs);
+                await save(FILES.SONGS, songs);
                 console.log(`✅ Song saved to database: "${s.title}" by ${s.artist}`);
             } catch (err) {
                 console.error('❌ Error saving songs.json:', err);
@@ -485,7 +485,7 @@ app.post('/songs', (req, res) => {
                 return res.status(500).json({ success: false, error: 'Unable to save song (server storage issue).' });
             }
 
-            createNotification('all', `Nouveau titre ajouté : ${s.title} par ${s.artist}`);
+            await createNotification('all', `Nouveau titre ajouté : ${s.title} par ${s.artist}`);
             return res.json({ success: true });
         } catch (e) {
             console.error('Unhandled error in /songs POST:', e);
@@ -493,7 +493,7 @@ app.post('/songs', (req, res) => {
         }
     })();
 });
-app.put('/songs/:id', (req, res) => {
+app.put('/songs/:id', async (req, res) => {
     const { id } = req.params;
     const { song } = req.body; // Wrapper {username, song} or just body
     const updateData = song || req.body;
@@ -501,18 +501,28 @@ app.put('/songs/:id', (req, res) => {
     const idx = songs.findIndex(s => s.id == id);
     if (idx !== -1) {
         songs[idx] = { ...songs[idx], ...updateData, id }; // Keep ID
-        save(FILES.SONGS, songs);
-        res.json({ success: true });
+        try {
+            await save(FILES.SONGS, songs);
+            res.json({ success: true });
+        } catch (err) {
+            console.error('❌ Error saving song:', err);
+            res.status(500).json({ success: false, error: 'Failed to save song' });
+        }
     } else res.status(404).json({ error: "Song not found" });
 });
-app.delete('/songs/:id', (req, res) => {
+app.delete('/songs/:id', async (req, res) => {
     songs = songs.filter(s => s.id != req.params.id);
-    save(FILES.SONGS, songs);
-    res.json({ success: true });
+    try {
+        await save(FILES.SONGS, songs);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('❌ Error deleting song:', err);
+        res.status(500).json({ success: false, error: 'Failed to delete song' });
+    }
 });
 
 // LIKE/UNLIKE SONG
-app.post('/songs/:id/like', (req, res) => {
+app.post('/songs/:id/like', async (req, res) => {
     const { id } = req.params;
     const { username } = req.body;
     
@@ -540,8 +550,13 @@ app.post('/songs/:id/like', (req, res) => {
         song.likes.push(username);
     }
     
-    save(FILES.SONGS, songs);
-    res.json({ success: true, liked: likeIndex === -1, likeCount: song.likes.length });
+    try {
+        await save(FILES.SONGS, songs);
+        res.json({ success: true, liked: likeIndex === -1, likeCount: song.likes.length });
+    } catch (err) {
+        console.error('❌ Error saving like:', err);
+        res.status(500).json({ success: false, error: 'Failed to save like' });
+    }
 });
 
 // LIKE/UNLIKE ALBUM
@@ -797,13 +812,30 @@ app.delete('/notifications', (req, res) => {
 });
 
 // INITIALISATION ET LANCEMENT
-if (!fs.existsSync(FILES.USERS)) save(FILES.USERS, MOCK_DATA.USERS);
-if (!fs.existsSync(FILES.ARTISTS)) save(FILES.ARTISTS, MOCK_DATA.ARTISTS);
-if (!fs.existsSync(FILES.SONGS)) save(FILES.SONGS, MOCK_DATA.SONGS);
-if (!fs.existsSync(FILES.PLAYLISTS)) save(FILES.PLAYLISTS, MOCK_DATA.PLAYLISTS);
-if (!fs.existsSync(FILES.GENRES)) save(FILES.GENRES, MOCK_DATA.GENRES);
-if (!fs.existsSync(FILES.NOTIFICATIONS)) save(FILES.NOTIFICATIONS, MOCK_DATA.NOTIFICATIONS);
-if (!fs.existsSync(FILES.POSTS)) save(FILES.POSTS, MOCK_DATA.POSTS);
+// Only create files with mock data if they don't exist
+// This prevents accidental data loss if files are temporarily inaccessible
+const initializeFileIfNeeded = (filePath, mockData) => {
+    try {
+        if (!fs.existsSync(filePath)) {
+            const dir = path.dirname(filePath);
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
+            fs.writeFileSync(filePath, JSON.stringify(mockData, null, 2));
+            console.log(`✅ Created ${path.basename(filePath)}`);
+        }
+    } catch (err) {
+        console.error(`❌ Error initializing ${path.basename(filePath)}:`, err.message);
+    }
+};
+
+initializeFileIfNeeded(FILES.USERS, MOCK_DATA.USERS);
+initializeFileIfNeeded(FILES.ARTISTS, MOCK_DATA.ARTISTS);
+initializeFileIfNeeded(FILES.SONGS, MOCK_DATA.SONGS);
+initializeFileIfNeeded(FILES.PLAYLISTS, MOCK_DATA.PLAYLISTS);
+initializeFileIfNeeded(FILES.GENRES, MOCK_DATA.GENRES);
+initializeFileIfNeeded(FILES.NOTIFICATIONS, MOCK_DATA.NOTIFICATIONS);
+initializeFileIfNeeded(FILES.POSTS, MOCK_DATA.POSTS);
 
 const HOST = '0.0.0.0';
 app.listen(PORT, HOST, () => {
