@@ -361,6 +361,57 @@ async function createPlaylistHandler(req, res) {
   }
 }
 
+// GET PLAYLIST BY ID
+app.get('/api/playlists/:id', playlistByIdHandler);
+app.get('/playlists/:id', playlistByIdHandler);
+
+async function playlistByIdHandler(req, res) {
+  try {
+    const playlist = await Playlist.findById(req.params.id);
+    if (!playlist) return res.status(404).json({ error: 'Playlist not found' });
+    res.json(playlist);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// ADD SONG TO PLAYLIST
+app.post('/api/playlists/:id/songs', addSongToPlaylistHandler);
+app.post('/playlists/:id/songs', addSongToPlaylistHandler);
+
+async function addSongToPlaylistHandler(req, res) {
+  try {
+    const { songId } = req.body;
+    const playlist = await Playlist.findById(req.params.id);
+    if (!playlist) return res.status(404).json({ error: 'Playlist not found' });
+    
+    if (!playlist.songs.includes(songId)) {
+      playlist.songs.push(songId);
+      await playlist.save();
+    }
+    res.json(playlist);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// REMOVE SONG FROM PLAYLIST
+app.delete('/api/playlists/:id/songs/:songId', removeSongFromPlaylistHandler);
+app.delete('/playlists/:id/songs/:songId', removeSongFromPlaylistHandler);
+
+async function removeSongFromPlaylistHandler(req, res) {
+  try {
+    const playlist = await Playlist.findById(req.params.id);
+    if (!playlist) return res.status(404).json({ error: 'Playlist not found' });
+    
+    playlist.songs = playlist.songs.filter(s => s !== req.params.songId);
+    await playlist.save();
+    res.json(playlist);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 // GET POSTS
 app.get('/api/posts', postsHandler);
 app.get('/posts', postsHandler);
@@ -387,6 +438,33 @@ async function genresHandler(req, res) {
   }
 }
 
+// CREATE GENRE
+app.post('/api/genres', createGenreHandler);
+app.post('/genres', createGenreHandler);
+
+async function createGenreHandler(req, res) {
+  try {
+    const genre = new Genre(req.body);
+    await genre.save();
+    res.json(genre);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// DELETE GENRE
+app.delete('/api/genres/:name', deleteGenreHandler);
+app.delete('/genres/:name', deleteGenreHandler);
+
+async function deleteGenreHandler(req, res) {
+  try {
+    const result = await Genre.deleteOne({ name: req.params.name });
+    res.json({ success: result.deletedCount > 0 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 // GET ARTISTS
 app.get('/api/artists', artistsHandler);
 app.get('/artists', artistsHandler);
@@ -395,6 +473,34 @@ async function artistsHandler(req, res) {
   try {
     const artists = await Artist.find().limit(100);
     res.json(artists);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// CREATE ARTIST
+app.post('/api/artists', createArtistHandler);
+app.post('/artists', createArtistHandler);
+
+async function createArtistHandler(req, res) {
+  try {
+    const artist = new Artist(req.body);
+    await artist.save();
+    res.json(artist);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// GET ARTIST BY NAME
+app.get('/api/artists/:name', artistByNameHandler);
+app.get('/artists/:name', artistByNameHandler);
+
+async function artistByNameHandler(req, res) {
+  try {
+    const artist = await Artist.findOne({ name: req.params.name });
+    if (!artist) return res.status(404).json({ error: 'Artist not found' });
+    res.json(artist);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -413,8 +519,78 @@ async function notificationsHandler(req, res) {
   }
 }
 
-// SERVE AUDIO FILES
-app.use('/uploads/audio', express.static(path.join(__dirname, 'uploads', 'audio')));
+// DELETE NOTIFICATION
+app.delete('/api/notifications/:id', deleteNotificationHandler);
+app.delete('/notifications/:id', deleteNotificationHandler);
+
+async function deleteNotificationHandler(req, res) {
+  try {
+    const result = await Notification.findByIdAndDelete(req.params.id);
+    res.json({ success: !!result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// GET POSTS
+app.get('/api/posts', postsHandler);
+app.get('/posts', postsHandler);
+
+async function postsHandler(req, res) {
+  try {
+    const posts = await Post.find().limit(500);
+    res.json(posts);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// CREATE POST
+app.post('/api/posts', createPostHandler);
+app.post('/posts', createPostHandler);
+
+async function createPostHandler(req, res) {
+  try {
+    const post = new Post(req.body);
+    await post.save();
+    res.json(post);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// DELETE POST
+app.delete('/api/posts/:id', deletePostHandler);
+app.delete('/posts/:id', deletePostHandler);
+
+async function deletePostHandler(req, res) {
+  try {
+    const result = await Post.findByIdAndDelete(req.params.id);
+    res.json({ success: !!result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// LIKE POST
+app.post('/api/posts/:id/like', likePostHandler);
+app.post('/posts/:id/like', likePostHandler);
+
+async function likePostHandler(req, res) {
+  try {
+    const { username } = req.body;
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+    
+    if (!post.likes.includes(username)) {
+      post.likes.push(username);
+      await post.save();
+    }
+    res.json(post);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
 
 // GET USER PROFILE BY USERNAME
 app.get('/api/users/profile/:username', userProfileHandler);
@@ -430,7 +606,65 @@ async function userProfileHandler(req, res) {
   }
 }
 
-// Static files
+// UPDATE USER PROFILE
+app.put('/api/users/profile', updateUserProfileHandler);
+app.put('/users/profile', updateUserProfileHandler);
+
+async function updateUserProfileHandler(req, res) {
+  try {
+    const { username, ...updateData } = req.body;
+    const user = await User.findOneAndUpdate({ username }, updateData, { new: true }).select('-password');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// FOLLOW USER
+app.post('/api/users/follow', followUserHandler);
+app.post('/users/follow', followUserHandler);
+
+async function followUserHandler(req, res) {
+  try {
+    const { follower, following } = req.body;
+    const user = await User.findOne({ username: follower });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    if (!user.following.includes(following)) {
+      user.following.push(following);
+      await user.save();
+    }
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// LIKE SONG
+app.post('/api/songs/:id/like', likeSongHandler);
+app.post('/songs/:id/like', likeSongHandler);
+
+async function likeSongHandler(req, res) {
+  try {
+    const { username } = req.body;
+    const song = await Song.findById(req.params.id);
+    if (!song) return res.status(404).json({ error: 'Song not found' });
+    
+    if (!song.likes.includes(username)) {
+      song.likes.push(username);
+      await song.save();
+    }
+    res.json(song);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// SERVE AUDIO FILES
+app.use('/uploads/audio', express.static(path.join(__dirname, 'uploads', 'audio')));
+
+// SERVE STATIC FILES
 app.use(express.static(__dirname));
 
 // 404
