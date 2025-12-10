@@ -15,7 +15,6 @@ console.log(`📁 Working dir: ${__dirname}`);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
-app.use(express.static(__dirname));
 
 // ==================== DATABASE ====================
 
@@ -197,6 +196,12 @@ app.post('/api/config/:key', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// Static files - AFTER all API routes
+app.use(express.static(__dirname, {
+  maxAge: '1h',
+  etag: false
+}));
 
 // Error handler
 app.use((err, req, res, next) => {
