@@ -418,22 +418,24 @@ app.post('/songs', (req, res) => {
                         const buffer = Buffer.from(base64, 'base64');
                         console.log(`📊 Audio size: ${(buffer.length/1024/1024).toFixed(2)} MB`);
 
-                        // Upload vers Cloudinary avec axios et base64
+                        // Upload vers Cloudinary avec upload_stream
                         try {
-                            const axios = require('axios');
-                            const base64Audio = buffer.toString('base64');
+                            const result = await new Promise((resolve, reject) => {
+                                const uploadStream = cloudinary.uploader.upload_stream(
+                                    {
+                                        resource_type: 'video',
+                                        folder: 'spider-music'
+                                    },
+                                    (error, result) => {
+                                        if (error) reject(error);
+                                        else resolve(result);
+                                    }
+                                );
+                                uploadStream.end(buffer);
+                            });
                             
-                            const response = await axios.post(
-                                `https://api.cloudinary.com/v1_1/dvtkoyj0w/video/upload`,
-                                {
-                                    file: `data:audio/mpeg;base64,${base64Audio}`,
-                                    api_key: process.env.CLOUDINARY_API_KEY || '741567951621919',
-                                    folder: 'spider-music'
-                                }
-                            );
-                            
-                            songData.src = response.data.secure_url;
-                            console.log(`☁️ File uploaded to Cloudinary: ${response.data.secure_url}`);
+                            songData.src = result.secure_url;
+                            console.log(`☁️ File uploaded to Cloudinary: ${result.secure_url}`);
                         } catch (cloudinaryError) {
                             console.error('❌ Cloudinary upload error:', cloudinaryError.message);
                             // Fallback: stockage local temporaire
@@ -451,7 +453,6 @@ app.post('/songs', (req, res) => {
                             const filePath = path.join(uploadDir, filename);
                             fs.writeFileSync(filePath, buffer);
                             songData.src = `/uploads/audio/${filename}`;
-                            console.log(`⚠️ Fallback to local storage: ${filename}`);
                             console.log(`⚠️ Fallback to local storage: ${filename}`);
                         }
                     } else {
