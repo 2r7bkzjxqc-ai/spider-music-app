@@ -19,60 +19,49 @@ const { hashPassword, verifyPassword, cleanUserData } = require('./utils/auth');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- CONFIGURATION CLOUDINARY ---
+// === CONFIGURATION ===
+// Cloudinary config
 cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dvtkoyj0w',
-    api_key: process.env.CLOUDINARY_API_KEY || '741567951621919',
-    api_secret: process.env.CLOUDINARY_API_SECRET || '-aEPdpeDrncsTsNcGP88cSg9st0'
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'spider-music',
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// --- CONFIGURATION MONGOOSE ---
+// MongoDB connection
 const MONGODB_URI = process.env.MONGODB_URI;
-
 if (!MONGODB_URI) {
     console.error('❌ MONGODB_URI environment variable is not set');
-    console.error('❌ Please add MONGODB_URI to Railway variables');
     process.exit(1);
 }
 
 console.log('📡 Connecting to MongoDB Atlas...');
-console.log('🔗 MongoDB URI configured (first 50 chars):', MONGODB_URI.substring(0, 50) + '...');
-
 mongoose.connect(MONGODB_URI, {
-    serverSelectionTimeoutMS: 30000,  // 30 seconds
+    serverSelectionTimeoutMS: 30000,
     socketTimeoutMS: 30000,
     connectTimeoutMS: 30000,
-    retryWrites: true,
-    w: 'majority'
 })
-.then(() => {
-    console.log('✅ MongoDB connected successfully');
-})
+.then(() => console.log('✅ MongoDB connected successfully'))
 .catch(err => {
     console.error('❌ MongoDB connection error:', err.message);
-    console.error('❌ Stack:', err.stack);
     process.exit(1);
 });
 
-// --- MIDDLEWARE ---
+// === MIDDLEWARE ===
 app.use(cors());
 app.use(bodyParser.json({ limit: '2gb' }));
+app.use(bodyParser.urlencoded({ limit: '2gb', extended: true }));
 
-// Log incoming requests (with error handling)
+// Request logging
 app.use((req, res, next) => {
-    try {
-        console.log(`📨 ${req.method} ${req.path}`);
-    } catch (err) {
-        console.error('❌ Error in request logging:', err);
-    }
+    console.log(`📨 ${req.method} ${req.path}`);
     next();
 });
 
-// Serve static files from root directory (simple config)
+// Serve static files
 app.use(express.static(__dirname));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Track MongoDB connection status
+// MongoDB connection tracking
 let mongoConnected = false;
 mongoose.connection.on('connected', () => {
     mongoConnected = true;
@@ -83,75 +72,89 @@ mongoose.connection.on('disconnected', () => {
     console.error('❌ MongoDB connection lost');
 });
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-    res.json({ 
-        status: 'ok', 
-        mongodb: mongoConnected ? 'connected' : 'disconnected',
-        timestamp: new Date().toISOString()
-    });
-});
-
-// --- MULTER CONFIGURATION ---
+// === MULTER CONFIGURATION ===
 const storage = multer.memoryStorage();
 const fileFilter = (req, file, cb) => {
     const allowedMimes = [
-        'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 
-        'audio/flac', 'audio/x-flac', 'audio/ogg', 'audio/aac', 
+        'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav',
+        'audio/flac', 'audio/x-flac', 'audio/ogg', 'audio/aac',
         'audio/x-m4a', 'audio/mp4', 'audio/opus', 'audio/x-ms-wma',
         'audio/x-aiff', 'audio/aiff', 'audio/x-ape', 'audio/webm'
     ];
-    const allowedExts = ['.mp3', '.wav', '.flac', '.ogg', '.aac', '.m4a', '.opus', '.alac', '.wma', '.aiff', '.ape', '.dsd', '.webm'];
-    
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (allowedMimes.includes(file.mimetype) || allowedExts.includes(ext)) {
+    if (allowedMimes.includes(file.mimetype)) {
         cb(null, true);
     } else {
         cb(new Error('Format de fichier audio non supporté'), false);
     }
 };
-
 const upload = multer({ storage, fileFilter });
 
-// --- ROUTES ---
+// === HEALTH CHECK ===
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        mongodb: mongoConnected ? 'connected' : 'disconnected',
+        timestamp: new Date().toISOString()
+    });
+});
 
-// 1. AUTH & USERS
+// === AUTHENTICATION ROUTES ===
+
+// Login
 app.post('/auth/login', async (req, res) => {
     try {
         const { username, password } = req.body;
-        const user = await User.findOne({ username });
-        
-        if (user && verifyPassword(password, user.password)) {
-            user.isOnline = true;
-            await user.save();
-            res.json({ 
-                success: true, 
-                role: user.role, 
-                following: user.following || [], 
-                avatar: user.avatar,
-                likedAlbums: user.likedAlbums || []
-            });
-        } else {
-            res.status(401).json({ success: false, message: "Identifiants incorrects" });
+
+        if (!username || !password) {
+            return res.status(400).json({ success: false, message: 'Username and password required' });
         }
+
+        const user = await User.findOne({ username });
+
+        if (!user || !verifyPassword(password, user.password)) {
+            return res.status(401).json({ success: false, message: 'Invalid credentials' });
+        }
+
+        // Update online status
+        user.isOnline = true;
+        await user.save();
+
+        // Return user data without password
+        res.json({
+            success: true,
+            user: {
+                username: user.username,
+                role: user.role,
+                avatar: user.avatar,
+                banner: user.banner,
+                following: user.following || [],
+                followers: user.followers || [],
+                likedAlbums: user.likedAlbums || []
+            }
+        });
     } catch (err) {
         console.error('❌ Login error:', err);
         res.status(500).json({ success: false, error: 'Server error' });
     }
 });
 
+// Register
 app.post('/auth/register', async (req, res) => {
     try {
         const { username, password } = req.body;
-        
+
+        if (!username || !password) {
+            return res.status(400).json({ success: false, message: 'Username and password required' });
+        }
+
         const existingUser = await User.findOne({ username });
         if (existingUser) {
-            return res.json({ success: false, message: "Username already taken" });
+            return res.status(400).json({ success: false, message: 'Username already taken' });
         }
-        
+
         const newUser = new User({
             username,
-            password: hashPassword(password), // Hash le mot de passe
+            password: hashPassword(password),
             role: 'user',
             avatar: '',
             banner: '',
@@ -159,140 +162,68 @@ app.post('/auth/register', async (req, res) => {
             following: [],
             isOnline: true
         });
-        
+
         await newUser.save();
-        res.json({ success: true, role: 'user', following: [], avatar: "" });
+
+        res.json({
+            success: true,
+            message: 'Registration successful',
+            user: {
+                username: newUser.username,
+                role: newUser.role
+            }
+        });
     } catch (err) {
         console.error('❌ Register error:', err);
         res.status(500).json({ success: false, error: 'Server error' });
     }
 });
 
+// === USERS ROUTES ===
+
+// Get all users
 app.get('/users', async (req, res) => {
     try {
-        const users = await User.find();
-        // Ne jamais envoyer les mots de passe
-        const cleanedUsers = users.map(user => cleanUserData(user));
-        res.json(cleanedUsers);
+        const users = await User.find().select('-password');
+        res.json(users);
     } catch (err) {
         console.error('❌ Error fetching users:', err);
         res.status(500).json({ error: 'Server error' });
     }
 });
 
-app.get('/users/profile/:username', async (req, res) => {
+// Get user by username
+app.get('/users/:username', async (req, res) => {
     try {
-        const user = await User.findOne({ username: req.params.username });
-        if (!user) {
-            return res.status(404).json({});
-        }
-        
-        const userPlaylists = await Playlist.find({ owner: user.username });
-        const cleanedUser = cleanUserData(user);
-        res.json({ 
-            ...cleanedUser, 
-            playlists: userPlaylists, 
-            followers: user.followers || [], 
-            following: user.following || [] 
-        });
-    } catch (err) {
-        console.error('❌ Error fetching profile:', err);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
-
-app.put('/users/:username', async (req, res) => {
-    try {
-        const { username } = req.params;
-        const { newUsername } = req.body;
-        
-        if (!newUsername || newUsername.length < 3) {
-            return res.status(400).json({ error: 'Username must be at least 3 characters' });
-        }
-        
-        const exists = await User.findOne({ username: newUsername });
-        if (exists) {
-            return res.status(409).json({ error: 'Username already exists' });
-        }
-        
-        const user = await User.findOne({ username });
+        const user = await User.findOne({ username: req.params.username }).select('-password');
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
-        
-        const oldUsername = user.username;
-        user.username = newUsername;
-        await user.save();
-        
-        await Playlist.updateMany({ owner: oldUsername }, { owner: newUsername });
-        await Post.updateMany({ author: oldUsername }, { author: newUsername });
-        
-        res.json({ success: true });
+        res.json(user);
     } catch (err) {
-        console.error('❌ Error updating username:', err);
+        console.error('❌ Error fetching user:', err);
         res.status(500).json({ error: 'Server error' });
     }
 });
 
-app.put('/users/profile', async (req, res) => {
+// Update user
+app.put('/users/:username', async (req, res) => {
     try {
-        const { username, avatar, banner } = req.body;
-        const user = await User.findOne({ username });
-        
-        if (!user) {
-            return res.status(404).json({ error: "User not found" });
-        }
-        
-        if (avatar) user.avatar = avatar;
-        if (banner) user.banner = banner;
-        await user.save();
-        
-        res.json({ success: true });
+        const user = await User.findOneAndUpdate(
+            { username: req.params.username },
+            req.body,
+            { new: true }
+        ).select('-password');
+        res.json(user);
     } catch (err) {
-        console.error('❌ Error updating profile:', err);
+        console.error('❌ Error updating user:', err);
         res.status(500).json({ error: 'Server error' });
     }
 });
 
-app.post('/users/follow', async (req, res) => {
-    try {
-        const { requester, target } = req.body;
-        const reqUser = await User.findOne({ username: requester });
-        const targetUser = await User.findOne({ username: target });
+// === SONGS ROUTES ===
 
-        if (!reqUser || !targetUser) {
-            return res.status(404).json({ error: "User not found" });
-        }
-
-        if (!reqUser.following) reqUser.following = [];
-        if (!targetUser.followers) targetUser.followers = [];
-
-        const isFollowing = reqUser.following.includes(target);
-
-        if (isFollowing) {
-            reqUser.following = reqUser.following.filter(u => u !== target);
-            targetUser.followers = targetUser.followers.filter(u => u !== requester);
-        } else {
-            reqUser.following.push(target);
-            targetUser.followers.push(requester);
-            
-            await Notification.create({
-                targetUser: target,
-                message: `${requester} a commencé à vous suivre !`,
-                sender: requester
-            });
-        }
-
-        await reqUser.save();
-        await targetUser.save();
-        res.json({ success: true });
-    } catch (err) {
-        console.error('❌ Error following user:', err);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
-
-// 2. SONGS
+// Get all songs
 app.get('/songs', async (req, res) => {
     try {
         const songs = await Song.find();
@@ -303,136 +234,144 @@ app.get('/songs', async (req, res) => {
     }
 });
 
-app.post('/songs', upload.single('file'), async (req, res) => {
-    (async () => {
-        try {
-            console.log('📥 Received song upload request');
-            let songData = { ...req.body };
+// Get song by ID
+app.get('/songs/:id', async (req, res) => {
+    try {
+        const song = await Song.findById(req.params.id);
+        if (!song) {
+            return res.status(404).json({ error: 'Song not found' });
+        }
+        res.json(song);
+    } catch (err) {
+        console.error('❌ Error fetching song:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
 
-            if (songData.src && typeof songData.src === 'string' && songData.src.startsWith('data:')) {
-                try {
-                    console.log('🔄 Processing base64 audio data...');
-                    const matches = songData.src.match(/^data:(.+);base64,(.+)$/);
-                    if (matches) {
-                        const mime = matches[1];
-                        const base64 = matches[2];
-                        const buffer = Buffer.from(base64, 'base64');
-                        console.log(`📊 Audio size: ${(buffer.length/1024/1024).toFixed(2)} MB`);
+// Create song (upload audio to Cloudinary)
+app.post('/songs', upload.single('audio'), async (req, res) => {
+    try {
+        const { title, artist, genre, album, cover, src } = req.body;
 
-                        try {
-                            const tempDir = path.join(__dirname, 'temp');
-                            const tempFilePath = path.join(tempDir, `temp-${Date.now()}.mp3`);
-                            
-                            if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-                            fs.writeFileSync(tempFilePath, buffer);
-                            
-                            const result = await cloudinary.uploader.upload(tempFilePath, {
-                                resource_type: 'video',
-                                folder: 'spider-music'
-                            });
-                            
-                            fs.unlinkSync(tempFilePath);
-                            songData.src = result.secure_url;
-                            console.log(`☁️ File uploaded to Cloudinary: ${result.secure_url}`);
-                        } catch (cloudinaryError) {
-                            console.error('❌ Cloudinary upload error:', cloudinaryError.message);
-                            return res.status(500).json({ 
-                                success: false, 
-                                error: 'Failed to upload to Cloudinary' 
-                            });
-                        }
+        let audioUrl = src; // Could be SoundCloud link
+
+        // If audio file is provided, upload to Cloudinary
+        if (req.file) {
+            console.log('📤 Uploading audio to Cloudinary...');
+            const result = await cloudinary.uploader.upload_stream(
+                {
+                    resource_type: 'video', // Cloudinary treats audio as video
+                    folder: 'spider-music/songs',
+                    public_id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    format: 'mp3'
+                },
+                async (error, result) => {
+                    if (error) {
+                        console.error('❌ Cloudinary upload error:', error);
+                        return res.status(500).json({ error: 'Failed to upload audio' });
                     }
-                } catch (err) {
-                    console.error('❌ Error processing data URL:', err);
-                    return res.status(500).json({ success: false, error: 'Error processing audio' });
-                }
-            }
 
+                    // Save song to MongoDB with Cloudinary URL
+                    const song = new Song({
+                        title,
+                        artist,
+                        genre: genre || '',
+                        album: album || '',
+                        cover: cover || '',
+                        src: result.secure_url, // Cloudinary URL
+                        likes: [],
+                        createdAt: new Date()
+                    });
+
+                    await song.save();
+                    console.log(`✅ Song saved: ${title}`);
+                    res.json({ success: true, song });
+                }
+            );
+
+            // Convert buffer to stream
+            result.end(req.file.buffer);
+        } else if (src) {
+            // If no file but src provided (e.g., SoundCloud link)
             const song = new Song({
-                title: songData.title,
-                artist: songData.artist,
-                genre: songData.genre || '',
-                album: songData.album || '',
-                cover: songData.cover || '',
-                src: songData.src,
-                likes: []
+                title,
+                artist,
+                genre: genre || '',
+                album: album || '',
+                cover: cover || '',
+                src, // Use provided URL
+                likes: [],
+                createdAt: new Date()
             });
 
             await song.save();
-            console.log(`✅ Song saved to MongoDB: "${song.title}" by ${song.artist}`);
-
-            await Notification.create({
-                targetUser: 'all',
-                message: `Nouveau titre ajouté : ${song.title} par ${song.artist}`,
-                sender: 'System'
-            });
-
-            res.json({ success: true });
-        } catch (e) {
-            console.error('❌ Unhandled error in /songs POST:', e);
-            res.status(500).json({ success: false, error: 'Server error' });
+            console.log(`✅ Song saved: ${title}`);
+            res.json({ success: true, song });
+        } else {
+            res.status(400).json({ error: 'Audio file or src URL required' });
         }
-    })();
+    } catch (err) {
+        console.error('❌ Error creating song:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
 });
 
+// Update song
 app.put('/songs/:id', async (req, res) => {
     try {
-        const { id } = req.params;
-        const updateData = req.body.song || req.body;
-        
-        const song = await Song.findByIdAndUpdate(id, updateData, { new: true });
+        const song = await Song.findByIdAndUpdate(req.params.id, req.body, { new: true });
         if (!song) {
-            return res.status(404).json({ error: "Song not found" });
+            return res.status(404).json({ error: 'Song not found' });
         }
-        
-        res.json({ success: true });
+        res.json(song);
     } catch (err) {
         console.error('❌ Error updating song:', err);
         res.status(500).json({ error: 'Server error' });
     }
 });
 
+// Delete song
 app.delete('/songs/:id', async (req, res) => {
     try {
-        const { id } = req.params;
-        await Song.findByIdAndDelete(id);
-        res.json({ success: true });
+        const song = await Song.findByIdAndDelete(req.params.id);
+        if (!song) {
+            return res.status(404).json({ error: 'Song not found' });
+        }
+        res.json({ success: true, message: 'Song deleted' });
     } catch (err) {
         console.error('❌ Error deleting song:', err);
         res.status(500).json({ error: 'Server error' });
     }
 });
 
+// Like/Unlike song
 app.post('/songs/:id/like', async (req, res) => {
     try {
-        const { id } = req.params;
         const { username } = req.body;
-        
-        if (!username) {
-            return res.status(400).json({ success: false, message: 'Username required' });
-        }
-        
-        const song = await Song.findById(id);
+        const song = await Song.findById(req.params.id);
+
         if (!song) {
-            return res.status(404).json({ success: false, message: 'Song not found' });
+            return res.status(404).json({ error: 'Song not found' });
         }
-        
+
         const likeIndex = song.likes.indexOf(username);
         if (likeIndex > -1) {
-            song.likes.splice(likeIndex, 1);
+            song.likes.splice(likeIndex, 1); // Unlike
         } else {
-            song.likes.push(username);
+            song.likes.push(username); // Like
         }
-        
+
         await song.save();
-        res.json({ success: true, liked: likeIndex === -1, likeCount: song.likes.length });
+        res.json({ success: true, likes: song.likes.length });
     } catch (err) {
         console.error('❌ Error liking song:', err);
         res.status(500).json({ error: 'Server error' });
     }
 });
 
-// 3. PLAYLISTS
+// === PLAYLISTS ROUTES ===
+
+// Get all playlists
 app.get('/playlists', async (req, res) => {
     try {
         const playlists = await Playlist.find().populate('songs');
@@ -443,81 +382,52 @@ app.get('/playlists', async (req, res) => {
     }
 });
 
+// Create playlist
 app.post('/playlists', async (req, res) => {
     try {
-        const { name, owner, isPublic } = req.body;
-        
+        const { name, owner, description, isPublic } = req.body;
+
         const playlist = new Playlist({
             name,
             owner,
+            description: description || '',
             isPublic: isPublic || false,
             songs: []
         });
-        
+
         await playlist.save();
-        res.json({ success: true, id: playlist._id });
+        res.json({ success: true, playlist });
     } catch (err) {
         console.error('❌ Error creating playlist:', err);
         res.status(500).json({ error: 'Server error' });
     }
 });
 
-app.put('/playlists/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { name, isPublic } = req.body;
-        
-        const playlist = await Playlist.findByIdAndUpdate(
-            id,
-            { name, isPublic },
-            { new: true }
-        );
-        
-        if (!playlist) {
-            return res.status(404).json({ error: "Playlist not found" });
-        }
-        
-        res.json({ success: true });
-    } catch (err) {
-        console.error('❌ Error updating playlist:', err);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
-
-app.delete('/playlists/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        await Playlist.findByIdAndDelete(id);
-        res.json({ success: true });
-    } catch (err) {
-        console.error('❌ Error deleting playlist:', err);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
-
+// Add song to playlist
 app.post('/playlists/:id/songs', async (req, res) => {
     try {
-        const { id } = req.params;
         const { songId } = req.body;
-        
-        const playlist = await Playlist.findById(id);
+        const playlist = await Playlist.findById(req.params.id);
+
         if (!playlist) {
-            return res.status(404).json({ error: "Playlist not found" });
+            return res.status(404).json({ error: 'Playlist not found' });
         }
-        
+
         if (!playlist.songs.includes(songId)) {
             playlist.songs.push(songId);
             await playlist.save();
         }
-        
-        res.json({ success: true });
+
+        res.json({ success: true, playlist });
     } catch (err) {
         console.error('❌ Error adding song to playlist:', err);
         res.status(500).json({ error: 'Server error' });
     }
 });
 
-// 4. ARTISTS
+// === ARTISTS ROUTES ===
+
+// Get all artists
 app.get('/artists', async (req, res) => {
     try {
         const artists = await Artist.find();
@@ -528,169 +438,28 @@ app.get('/artists', async (req, res) => {
     }
 });
 
+// Create artist
 app.post('/artists', async (req, res) => {
     try {
-        const { name, avatar, bio } = req.body;
-        
+        const { name, bio } = req.body;
+
         const artist = new Artist({
             name,
-            avatar: avatar || '',
             bio: bio || '',
             followers: 0
         });
-        
+
         await artist.save();
-        res.json({ success: true });
+        res.json({ success: true, artist });
     } catch (err) {
         console.error('❌ Error creating artist:', err);
         res.status(500).json({ error: 'Server error' });
     }
 });
 
-// 5. POSTS
-app.get('/posts', async (req, res) => {
-    try {
-        const posts = await Post.find().sort({ createdAt: -1 });
-        res.json(posts);
-    } catch (err) {
-        console.error('❌ Error fetching posts:', err);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
+// === GENRES ROUTES ===
 
-app.post('/posts', async (req, res) => {
-    try {
-        const { author, content, image } = req.body;
-        
-        const post = new Post({
-            author,
-            content,
-            image: image || '',
-            likes: []
-        });
-        
-        await post.save();
-        res.json({ success: true });
-    } catch (err) {
-        console.error('❌ Error creating post:', err);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
-
-app.put('/posts/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { content } = req.body;
-        
-        const post = await Post.findByIdAndUpdate(id, { content }, { new: true });
-        if (!post) {
-            return res.status(404).json({ error: "Post not found" });
-        }
-        
-        res.json({ success: true });
-    } catch (err) {
-        console.error('❌ Error updating post:', err);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
-
-app.delete('/posts/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        await Post.findByIdAndDelete(id);
-        res.json({ success: true });
-    } catch (err) {
-        console.error('❌ Error deleting post:', err);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
-
-app.post('/posts/:id/like', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { username } = req.body;
-        
-        const post = await Post.findById(id);
-        if (!post) {
-            return res.status(404).json({ error: "Post not found" });
-        }
-        
-        const likeIndex = post.likes.indexOf(username);
-        if (likeIndex > -1) {
-            post.likes.splice(likeIndex, 1);
-        } else {
-            post.likes.push(username);
-        }
-        
-        await post.save();
-        res.json({ success: true, liked: likeIndex === -1, likes: post.likes.length });
-    } catch (err) {
-        console.error('❌ Error liking post:', err);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
-
-// 6. NOTIFICATIONS
-app.get('/notifications', async (req, res) => {
-    try {
-        const user = req.query.user;
-        let query = {};
-        
-        if (user) {
-            query = { $or: [{ targetUser: user }, { targetUser: 'all' }] };
-        }
-        
-        const notifications = await Notification.find(query).sort({ timestamp: -1 });
-        res.json(notifications);
-    } catch (err) {
-        console.error('❌ Error fetching notifications:', err);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
-
-app.post('/notifications', async (req, res) => {
-    try {
-        const { targetUser, message, sender } = req.body;
-        
-        const notification = new Notification({
-            targetUser,
-            message,
-            sender: sender || 'System'
-        });
-        
-        await notification.save();
-        res.json({ success: true });
-    } catch (err) {
-        console.error('❌ Error creating notification:', err);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
-
-app.delete('/notifications/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        await Notification.findByIdAndDelete(id);
-        res.json({ success: true });
-    } catch (err) {
-        console.error('❌ Error deleting notification:', err);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
-
-app.delete('/notifications', async (req, res) => {
-    try {
-        const username = req.query.username;
-        if (username) {
-            await Notification.deleteMany({ targetUser: username });
-        }
-        res.json({ success: true });
-    } catch (err) {
-        console.error('❌ Error deleting notifications:', err);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
-
-// 7. GENRES
+// Get all genres
 app.get('/genres', async (req, res) => {
     try {
         const genres = await Genre.find();
@@ -701,22 +470,103 @@ app.get('/genres', async (req, res) => {
     }
 });
 
+// Create genre
+app.post('/genres', async (req, res) => {
+    try {
+        const { name } = req.body;
+
+        const genre = new Genre({ name });
+        await genre.save();
+        res.json({ success: true, genre });
+    } catch (err) {
+        console.error('❌ Error creating genre:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// === POSTS ROUTES ===
+
+// Get all posts
+app.get('/posts', async (req, res) => {
+    try {
+        const posts = await Post.find().sort({ createdAt: -1 });
+        res.json(posts);
+    } catch (err) {
+        console.error('❌ Error fetching posts:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Create post
+app.post('/posts', async (req, res) => {
+    try {
+        const { author, content } = req.body;
+
+        const post = new Post({
+            author,
+            content,
+            likes: [],
+            image: ''
+        });
+
+        await post.save();
+        res.json({ success: true, post });
+    } catch (err) {
+        console.error('❌ Error creating post:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// === NOTIFICATIONS ROUTES ===
+
+// Get user notifications
+app.get('/notifications/:username', async (req, res) => {
+    try {
+        const notifications = await Notification.find({ targetUser: req.params.username }).sort({ timestamp: -1 });
+        res.json(notifications);
+    } catch (err) {
+        console.error('❌ Error fetching notifications:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Create notification
+app.post('/notifications', async (req, res) => {
+    try {
+        const { targetUser, message, sender } = req.body;
+
+        const notification = new Notification({
+            targetUser,
+            message,
+            sender: sender || 'System',
+            read: false
+        });
+
+        await notification.save();
+        res.json({ success: true, notification });
+    } catch (err) {
+        console.error('❌ Error creating notification:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// === INITIALIZATION ROUTES ===
+
+// Initialize default data
 app.post('/init-defaults', async (req, res) => {
     try {
-        const genreNames = ["Rap", "Pop", "Rock", "Electro", "R&B"];
+        // Create default genres
+        const genreNames = ['Rap', 'Pop', 'Rock', 'Electro', 'R&B', 'Jazz', 'Classical'];
         for (const name of genreNames) {
-            await Genre.findOneAndUpdate(
-                { name },
-                { name },
-                { upsert: true }
-            );
+            await Genre.findOneAndUpdate({ name }, { name }, { upsert: true });
         }
-        
+
+        // Create admin user if doesn't exist
         const adminExists = await User.findOne({ username: 'admin' });
         if (!adminExists) {
             await User.create({
                 username: 'admin',
-                password: '123',
+                password: hashPassword('admin123'),
                 role: 'superadmin',
                 avatar: '',
                 banner: '',
@@ -724,7 +574,7 @@ app.post('/init-defaults', async (req, res) => {
                 following: []
             });
         }
-        
+
         res.json({ success: true, message: 'Defaults initialized' });
     } catch (err) {
         console.error('❌ Error initializing defaults:', err);
@@ -732,36 +582,32 @@ app.post('/init-defaults', async (req, res) => {
     }
 });
 
-// --- ERROR HANDLING MIDDLEWARE ---
+// === ERROR HANDLING ===
+
+// 404 handler
+app.use((req, res) => {
+    console.log(`⚠️  404 Not Found: ${req.method} ${req.path}`);
+    if (req.path.startsWith('/api') || req.path.startsWith('/auth') || req.path.startsWith('/songs') || req.path.startsWith('/users')) {
+        return res.status(404).json({ success: false, message: 'Route not found' });
+    }
+    // Serve index.html for SPA routing
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Error handler
 app.use((err, req, res, next) => {
-    console.error('❌ Express error:', err);
-    res.status(err.status || 500).json({ 
-        success: false, 
-        error: err.message || 'Internal Server Error' 
+    console.error('❌ Error:', err);
+    res.status(err.status || 500).json({
+        success: false,
+        error: err.message || 'Internal Server Error'
     });
 });
 
-// 404 handler - catch all unhandled routes
-app.use((req, res) => {
-    try {
-        console.log(`⚠️  404 Not Found: ${req.method} ${req.path}`);
-        // If it's an API request, return JSON
-        if (req.path.startsWith('/api') || req.path.startsWith('/auth') || req.path.startsWith('/songs') || req.path.startsWith('/users')) {
-            return res.status(404).json({ success: false, message: 'Route not found' });
-        }
-        // Otherwise, serve index.html for SPA routing
-        const indexPath = path.join(__dirname, 'index.html');
-        res.sendFile(indexPath);
-    } catch (err) {
-        console.error('❌ Error in 404 handler:', err);
-        res.status(500).json({ success: false, error: 'Server error' });
-    }
-});
+// === SERVER STARTUP ===
 
-// START SERVER
 async function startServer() {
     try {
-        // Attendre la connexion MongoDB
+        // Wait for MongoDB connection
         await new Promise((resolve, reject) => {
             const checkConnection = setInterval(() => {
                 if (mongoose.connection.readyState === 1) {
@@ -775,12 +621,12 @@ async function startServer() {
             }, 10000);
         });
 
-        // Vérifier et migrer les données si nécessaire
+        // Check and migrate data if needed
         const existingUsers = await User.countDocuments();
         if (existingUsers === 0) {
-            console.log('🔄 No users in MongoDB. Attempting migration from JSON...');
+            console.log('🔄 No users in MongoDB. Loading data from JSON files...');
             try {
-                // Charger directement les données JSON
+                // Load JSON data
                 const loadJSON = (filePath) => {
                     if (!fs.existsSync(filePath)) return [];
                     try {
@@ -800,30 +646,23 @@ async function startServer() {
                 const posts = loadJSON(path.join(dataDir, 'posts.json'));
                 const notifications = loadJSON(path.join(dataDir, 'notifications.json'));
 
-                console.log(`📥 Loading ${users.length} users, ${songs.length} songs, ${playlists.length} playlists...`);
+                console.log(`📥 Migrating ${users.length} users, ${songs.length} songs, ${playlists.length} playlists...`);
 
-                // Migrer les utilisateurs avec mots de passe hashés
+                // Migrate users with hashed passwords
                 for (const user of users) {
                     await User.findOneAndUpdate(
                         { username: user.username },
-                        {
-                            ...user,
-                            password: hashPassword(user.password)
-                        },
+                        { ...user, password: hashPassword(user.password) },
                         { upsert: true }
                     );
                 }
 
-                // Migrer les artistes
+                // Migrate artists
                 for (const artist of artists) {
-                    await Artist.findOneAndUpdate(
-                        { name: artist.name },
-                        artist,
-                        { upsert: true }
-                    );
+                    await Artist.findOneAndUpdate({ name: artist.name }, artist, { upsert: true });
                 }
 
-                // Migrer les chansons
+                // Migrate songs
                 for (const song of songs) {
                     await Song.findOneAndUpdate(
                         { title: song.title, artist: song.artist },
@@ -832,7 +671,7 @@ async function startServer() {
                     );
                 }
 
-                // Migrer les playlists
+                // Migrate playlists
                 for (const playlist of playlists) {
                     await Playlist.findOneAndUpdate(
                         { name: playlist.name, owner: playlist.owner },
@@ -841,7 +680,7 @@ async function startServer() {
                     );
                 }
 
-                // Migrer les genres
+                // Migrate genres
                 for (const genre of genres) {
                     await Genre.findOneAndUpdate(
                         { name: genre.name || genre },
@@ -850,7 +689,7 @@ async function startServer() {
                     );
                 }
 
-                // Migrer les posts
+                // Migrate posts
                 for (const post of posts) {
                     await Post.findOneAndUpdate(
                         { author: post.author, content: post.content },
@@ -859,7 +698,7 @@ async function startServer() {
                     );
                 }
 
-                // Migrer les notifications
+                // Migrate notifications
                 for (const notif of notifications) {
                     await Notification.findOneAndUpdate(
                         { targetUser: notif.targetUser, message: notif.message },
@@ -868,28 +707,29 @@ async function startServer() {
                     );
                 }
 
-                console.log('✅ Migration complete!');
+                console.log('✅ Data migration complete!');
             } catch (err) {
-                console.warn('⚠️  Migration error (continuing anyway):', err.message);
+                console.warn('⚠️  Migration error (continuing):', err.message);
             }
         } else {
             console.log(`ℹ️  MongoDB already contains ${existingUsers} users. Skipping migration.`);
         }
 
-        // Démarrer le serveur
+        // Start server
         const HOST = '0.0.0.0';
         const server = app.listen(PORT, HOST, () => {
             console.log(`🚀 Server running on http://${HOST}:${PORT}`);
-            console.log(`📡 MongoDB: ${MONGODB_URI}`);
+            console.log(`📡 MongoDB: Connected to spider-music database`);
+            console.log(`☁️  Cloudinary: Configured for uploads`);
         });
 
-        // Global error handler for uncaught exceptions
+        // Global error handlers
         process.on('uncaughtException', (err) => {
             console.error('❌ Uncaught Exception:', err);
         });
 
         process.on('unhandledRejection', (reason, promise) => {
-            console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+            console.error('❌ Unhandled Rejection:', reason);
         });
 
         server.on('error', (err) => {
