@@ -11,9 +11,9 @@ const PORT = process.env.PORT || 3000;
 
 // --- CONFIGURATION CLOUDINARY ---
 cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'ddedggf4a',
-    api_key: process.env.CLOUDINARY_API_KEY || '899516586614565',
-    api_secret: process.env.CLOUDINARY_API_SECRET || ''
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dvtkoyj0w',
+    api_key: process.env.CLOUDINARY_API_KEY || '741567951621919',
+    api_secret: process.env.CLOUDINARY_API_SECRET || '-aEPdpeDrncsTsNcGP88cSg9st0'
 });
 
 app.use(cors());
@@ -577,11 +577,12 @@ app.post('/upload-audio', upload.single('audioFile'), async (req, res) => {
         const cloudinaryConfigured = process.env.CLOUDINARY_CLOUD_NAME || cloudinary.config().cloud_name;
         
         if (cloudinaryConfigured) {
-            // Upload vers Cloudinary
+            // Upload vers Cloudinary avec upload preset
             const uploadStream = cloudinary.uploader.upload_stream(
                 {
                     resource_type: 'video', // Cloudinary utilise 'video' pour les fichiers audio
                     folder: 'spider-music',
+                    upload_preset: 'spider-music',
                     public_id: `audio-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
                 },
                 (error, result) => {
