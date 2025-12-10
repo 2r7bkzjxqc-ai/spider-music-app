@@ -675,8 +675,47 @@ app.post('/init-defaults', async (req, res) => {
 });
 
 // START SERVER
-const HOST = '0.0.0.0';
-app.listen(PORT, HOST, () => {
-    console.log(`🚀 Server running on http://${HOST}:${PORT}`);
-    console.log(`📡 MongoDB: ${MONGODB_URI}`);
-});
+async function startServer() {
+    try {
+        // Attendre la connexion MongoDB
+        await new Promise((resolve, reject) => {
+            const checkConnection = setInterval(() => {
+                if (mongoose.connection.readyState === 1) {
+                    clearInterval(checkConnection);
+                    resolve();
+                }
+            }, 100);
+            setTimeout(() => {
+                clearInterval(checkConnection);
+                reject(new Error('MongoDB connection timeout'));
+            }, 10000);
+        });
+
+        // Vérifier et migrer les données si nécessaire
+        const existingUsers = await User.countDocuments();
+        if (existingUsers === 0) {
+            console.log('🔄 No data in MongoDB. Attempting migration from JSON...');
+            try {
+                require('./migrate.js');
+                // Attendre la migration
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            } catch (err) {
+                console.warn('⚠️ Migration error (continuing anyway):', err.message);
+            }
+        } else {
+            console.log(`ℹ️  MongoDB already contains ${existingUsers} users. Skipping migration.`);
+        }
+
+        // Démarrer le serveur
+        const HOST = '0.0.0.0';
+        app.listen(PORT, HOST, () => {
+            console.log(`🚀 Server running on http://${HOST}:${PORT}`);
+            console.log(`📡 MongoDB: ${MONGODB_URI}`);
+        });
+    } catch (err) {
+        console.error('❌ Server startup error:', err.message);
+        process.exit(1);
+    }
+}
+
+startServer();
