@@ -143,8 +143,11 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// LOGIN
-app.post('/api/auth/login', async (req, res) => {
+// LOGIN - BOTH PATHS
+app.post('/api/auth/login', loginHandler);
+app.post('/auth/login', loginHandler);
+
+async function loginHandler(req, res) {
   try {
     const { username, password } = req.body;
     if (!username || !password) {
@@ -164,10 +167,13 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
+}
 
-// REGISTER
-app.post('/api/auth/register', async (req, res) => {
+// REGISTER - BOTH PATHS
+app.post('/api/auth/register', registerHandler);
+app.post('/auth/register', registerHandler);
+
+async function registerHandler(req, res) {
   try {
     const { username, password } = req.body;
     if (!username || !password) {
@@ -190,20 +196,26 @@ app.post('/api/auth/register', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
+}
 
 // GET ALL SONGS
-app.get('/api/songs', async (req, res) => {
+app.get('/api/songs', songsHandler);
+app.get('/songs', songsHandler);
+
+async function songsHandler(req, res) {
   try {
     const songs = await Song.find().limit(500);
     res.json(songs);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
+}
 
 // GET SONG BY ID
-app.get('/api/songs/:id', async (req, res) => {
+app.get('/api/songs/:id', songByIdHandler);
+app.get('/songs/:id', songByIdHandler);
+
+async function songByIdHandler(req, res) {
   try {
     const song = await Song.findById(req.params.id);
     if (!song) return res.status(404).json({ error: 'Not found' });
@@ -211,20 +223,26 @@ app.get('/api/songs/:id', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
+}
 
 // GET ALL USERS
-app.get('/api/users', async (req, res) => {
+app.get('/api/users', usersHandler);
+app.get('/users', usersHandler);
+
+async function usersHandler(req, res) {
   try {
     const users = await User.find().select('-password').limit(100);
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
+}
 
 // GET USER BY ID
-app.get('/api/users/:id', async (req, res) => {
+app.get('/api/users/:id', userByIdHandler);
+app.get('/users/:id', userByIdHandler);
+
+async function userByIdHandler(req, res) {
   try {
     const user = await User.findById(req.params.id).select('-password');
     if (!user) return res.status(404).json({ error: 'Not found' });
@@ -232,20 +250,26 @@ app.get('/api/users/:id', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
+}
 
 // GET ALL PLAYLISTS
-app.get('/api/playlists', async (req, res) => {
+app.get('/api/playlists', playlistsHandler);
+app.get('/playlists', playlistsHandler);
+
+async function playlistsHandler(req, res) {
   try {
     const playlists = await Playlist.find().limit(200);
     res.json(playlists);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
+}
 
 // CREATE PLAYLIST
-app.post('/api/playlists', async (req, res) => {
+app.post('/api/playlists', createPlaylistHandler);
+app.post('/playlists', createPlaylistHandler);
+
+async function createPlaylistHandler(req, res) {
   try {
     const playlist = new Playlist(req.body);
     await playlist.save();
@@ -253,7 +277,7 @@ app.post('/api/playlists', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
+}
 
 // Static files
 app.use(express.static(__dirname));
