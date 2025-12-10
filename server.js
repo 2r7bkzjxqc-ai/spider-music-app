@@ -240,9 +240,22 @@ async function start() {
     server.keepAliveTimeout = 65000;
     server.headersTimeout = 66000;
 
+    // Handle errors from server
+    server.on('error', (err) => {
+      console.error('❌ Server error:', err);
+    });
+
     // Graceful shutdown
     process.on('SIGTERM', () => {
       console.log('📴 SIGTERM - shutting down...');
+      server.close(() => {
+        mongoose.connection.close();
+        process.exit(0);
+      });
+    });
+
+    process.on('SIGINT', () => {
+      console.log('📴 SIGINT - shutting down...');
       server.close(() => {
         mongoose.connection.close();
         process.exit(0);
@@ -255,5 +268,18 @@ async function start() {
     process.exit(1);
   }
 }
+
+// Handle unhandled exceptions
+process.on('uncaughtException', (err) => {
+  console.error('❌ Uncaught Exception:', err.message);
+  console.error(err.stack);
+  process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
 
 start();
