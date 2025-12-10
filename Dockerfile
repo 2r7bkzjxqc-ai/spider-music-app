@@ -19,6 +19,7 @@ EXPOSE 3000
 
 # Set environment
 ENV NODE_ENV=production
+ENV NODE_OPTIONS="--unhandled-rejections=warn"
 
-# Start server
-CMD ["node", "server.js"]
+# Start server with unbuffered output
+CMD ["node", "--no-warnings", "server.js"]
