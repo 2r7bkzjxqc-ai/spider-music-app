@@ -406,7 +406,7 @@ app.post('/songs', (req, res) => {
             console.log('📥 Received song upload request');
             let songData = { ...req.body };
 
-            // If src is a data URL (base64), save it to disk instead of storing huge base64 in JSON
+            // If src is a data URL (base64), save it to Cloudinary
             if (songData.src && typeof songData.src === 'string' && songData.src.startsWith('data:')) {
                 try {
                     console.log('🔄 Processing base64 audio data...');
@@ -414,39 +414,49 @@ app.post('/songs', (req, res) => {
                     if (matches) {
                         const mime = matches[1];
                         const base64 = matches[2];
-                        // Extract extension from MIME type or use default
-                        let ext = (mime.split('/')[1] || 'bin').split(';')[0];
-                        // Handle common audio MIME types
-                        const mimeToExt = {
-                            'mpeg': 'mp3',
-                            'x-wav': 'wav',
-                            'wav': 'wav',
-                            'flac': 'flac',
-                            'x-flac': 'flac',
-                            'ogg': 'ogg',
-                            'aac': 'aac',
-                            'x-m4a': 'm4a',
-                            'mp4': 'm4a',
-                            'opus': 'opus',
-                            'x-ms-wma': 'wma',
-                            'x-aiff': 'aiff',
-                            'aiff': 'aiff',
-                            'x-ape': 'ape'
-                        };
-                        ext = mimeToExt[ext] || ext;
                         const buffer = Buffer.from(base64, 'base64');
-                        console.log(`📊 Audio size: ${(buffer.length/1024/1024).toFixed(2)} MB, format: ${ext}`);
+                        console.log(`📊 Audio size: ${(buffer.length/1024/1024).toFixed(2)} MB`);
 
-                        const uploadDir = path.join(__dirname, 'uploads', 'audio');
-                        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-                        const filename = `song_${Date.now()}_${Math.random().toString(36).substr(2, 6)}.${ext}`;
-                        const filePath = path.join(uploadDir, filename);
-                        fs.writeFileSync(filePath, buffer);
-                        console.log(`💾 Saved audio file: ${filename}`);
-                        // Use a web-accessible relative path
-                        songData.src = `/uploads/audio/${filename}`;
+                        // Upload vers Cloudinary
+                        try {
+                            const result = await new Promise((resolve, reject) => {
+                                const uploadStream = cloudinary.uploader.upload_stream(
+                                    {
+                                        resource_type: 'video',
+                                        folder: 'spider-music',
+                                        upload_preset: 'spider-music',
+                                        public_id: `song-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+                                    },
+                                    (error, result) => {
+                                        if (error) reject(error);
+                                        else resolve(result);
+                                    }
+                                );
+                                uploadStream.end(buffer);
+                            });
+
+                            songData.src = result.secure_url;
+                            console.log(`☁️ File uploaded to Cloudinary: ${result.secure_url}`);
+                        } catch (cloudinaryError) {
+                            console.error('❌ Cloudinary upload error:', cloudinaryError);
+                            // Fallback: stockage local temporaire
+                            const uploadDir = path.join(__dirname, 'uploads', 'audio');
+                            if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+                            let ext = (mime.split('/')[1] || 'mp3').split(';')[0];
+                            const mimeToExt = {
+                                'mpeg': 'mp3', 'x-wav': 'wav', 'wav': 'wav', 'flac': 'flac',
+                                'x-flac': 'flac', 'ogg': 'ogg', 'aac': 'aac', 'x-m4a': 'm4a',
+                                'mp4': 'm4a', 'opus': 'opus', 'x-ms-wma': 'wma',
+                                'x-aiff': 'aiff', 'aiff': 'aiff', 'x-ape': 'ape'
+                            };
+                            ext = mimeToExt[ext] || ext;
+                            const filename = `song_${Date.now()}_${Math.random().toString(36).substr(2, 6)}.${ext}`;
+                            const filePath = path.join(uploadDir, filename);
+                            fs.writeFileSync(filePath, buffer);
+                            songData.src = `/uploads/audio/${filename}`;
+                            console.log(`⚠️ Fallback to local storage: ${filename}`);
+                        }
                     } else {
-                        // Not a valid data URL
                         console.error('❌ Invalid data URL format');
                         songData.src = '';
                     }
