@@ -417,13 +417,13 @@ app.post('/songs', (req, res) => {
                         const buffer = Buffer.from(base64, 'base64');
                         console.log(`📊 Audio size: ${(buffer.length/1024/1024).toFixed(2)} MB`);
 
-                        // Upload vers Cloudinary
+                        // Upload vers Cloudinary (unsigned preset)
                         try {
                             const result = await new Promise((resolve, reject) => {
-                                const uploadStream = cloudinary.uploader.upload_stream(
+                                const uploadStream = cloudinary.uploader.unsigned_upload_stream(
+                                    'spider-music', // preset name
                                     {
                                         resource_type: 'video',
-                                        folder: 'spider-music',
                                         public_id: `song-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
                                     },
                                     (error, result) => {
