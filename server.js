@@ -42,6 +42,12 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({ storage, fileFilter });
 
+// --- CRÉER LES DOSSIERS NÉCESSAIRES ---
+const uploadDir = path.join(__dirname, 'uploads');
+const audioDir = path.join(__dirname, 'uploads', 'audio');
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+if (!fs.existsSync(audioDir)) fs.mkdirSync(audioDir, { recursive: true });
+
 // --- AJOUT IMPORTANT : SERVIR LE SITE WEB ---
 // Cela permet d'accéder à votre site via http://localhost:3000
 app.use(express.static(__dirname));
