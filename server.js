@@ -6,7 +6,11 @@ const path = require('path');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const fs = require('fs');
-require('dotenv').config();
+
+// Only load .env in development, not in production (Railway provides env vars)
+if (process.env.NODE_ENV !== 'production') {
+    require('dotenv').config();
+}
 
 // Import models and auth helpers
 const { User, Song, Playlist, Artist, Post, Notification, Genre } = require('./models');
