@@ -57,7 +57,18 @@ mongoose.connect(MONGODB_URI, {
 // --- MIDDLEWARE ---
 app.use(cors());
 app.use(bodyParser.json({ limit: '2gb' }));
-app.use(express.static(__dirname));
+
+// Log incoming requests
+app.use((req, res, next) => {
+    console.log(`📨 ${req.method} ${req.path}`);
+    next();
+});
+
+// Serve static files from root directory
+app.use(express.static(__dirname, {
+    index: ['index.html'],
+    extensions: ['html', 'js', 'css', 'json']
+}));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Track MongoDB connection status
@@ -78,6 +89,11 @@ app.get('/health', (req, res) => {
         mongodb: mongoConnected ? 'connected' : 'disconnected',
         timestamp: new Date().toISOString()
     });
+});
+
+// Serve index.html for root path
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // --- MULTER CONFIGURATION ---
