@@ -39,6 +39,24 @@
         .z-modal { z-index: 9999; } .z-overlay { z-index: 9998; } .z-fullscreen { z-index: 10000; } 
         .z-toast { z-index: 10001; } .z-notification { z-index: 60; }
         
+        /* Notification Panel Theme Adaptation */
+        #notificationPanel { position: absolute; right: 0; top: 100%; width: 350px; max-height: 400px; overflow-y: auto; border-radius: 0 0 12px 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .dark #notificationPanel { background: rgba(28, 28, 30, 0.95); }
+        .light #notificationPanel { background: rgba(255, 255, 255, 0.95); }
+        .pink #notificationPanel { background: rgba(244, 114, 182, 0.15); }
+        .lightpink #notificationPanel { background: rgba(254, 219, 242, 0.95); }
+        
+        .dark .notif-header { background: rgba(28, 28, 30, 0.95); }
+        .light .notif-header { background: rgba(240, 240, 240, 0.95); }
+        .pink .notif-header { background: rgba(236, 72, 153, 0.15); }
+        .lightpink .notif-header { background: rgba(244, 114, 182, 0.2); }
+        
+        .dark .notif-list { background: rgba(28, 28, 30, 0.95); }
+        .light .notif-list { background: rgba(255, 255, 255, 0.95); }
+        .pink .notif-list { background: rgba(244, 114, 182, 0.15); }
+        .lightpink .notif-list { background: rgba(254, 219, 242, 0.95); }
+        
+        
         .full-screen-player { 
             position: fixed; 
             inset: 0; 
@@ -1111,7 +1129,7 @@
 
                 <div class="flex items-center gap-4 flex-shrink-0">
                     <button onclick="toggleShuffle()" id="btnShuffle" class="text-gray-500 hover:text-white transition-all p-2 rounded-lg hover:bg-white/5"><i data-lucide="shuffle" class="w-4 h-4"></i></button>
-                    <button onclick="toggleRepeat()" id="btnRepeat" class="text-gray-500 hover:text-white transition-all p-2 rounded-lg hover:bg-white/5"><i data-lucide="repeat" class="w-4 h-4"></i></button>
+                    <button onclick="toggleRepeat()" id="btnRepeat" class="text-gray-500 hover:text-white transition-all p-2 rounded-lg hover:bg-white/5 cursor-pointer select-none" style="pointer-events: auto; user-select: none;"><i data-lucide="repeat" class="w-4 h-4"></i></button>
                     <div class="flex items-center gap-2 group/vol">
                         <i data-lucide="volume-2" class="w-4 h-4 text-gray-400 group-hover/vol:text-white transition-colors"></i>
                         <div class="w-24 h-1.5 bg-white/10 rounded-full relative overflow-hidden transition-all hover:h-2">
@@ -1127,10 +1145,10 @@
                     <i data-lucide="bell" class="w-5 h-5"></i><div id="notifDot" class="notif-dot"></div>
                 </button>
                 <div id="notificationPanel" class="z-notification hidden">
-                    <div class="px-4 py-3 border-b border-white/10 flex justify-between items-center bg-[#1c1c1e] sticky top-0 z-10">
+                    <div class="px-4 py-3 border-b border-white/10 flex justify-between items-center notif-header sticky top-0 z-10">
                         <h3 class="text-sm font-bold text-white" data-i18n="notifications.title">Notifications</h3><button onclick="clearNotifications()" class="text-xs text-red-400 hover:text-red-300" data-i18n="notifications.clearAll">Effacer tout</button>
                     </div>
-                    <div id="notificationList" class="p-0 text-sm"><p class="text-gray-500 text-center text-xs py-8" data-i18n="notifications.empty">Aucune notification</p></div>
+                    <div id="notificationList" class="p-0 text-sm notif-list"><p class="text-gray-500 text-center text-xs py-8" data-i18n="notifications.empty">Aucune notification</p></div>
                 </div>
             </div>
         </header>
@@ -3935,11 +3953,11 @@
                                 <div class="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-500 blur-xl opacity-0 group-hover:opacity-20 transition-opacity rounded-xl"></div>
                                 <img src="${s.cover || DEFAULT_COVER}" class="relative w-full aspect-square rounded-xl object-cover shadow-lg transform group-hover:scale-105 transition-transform">
                                 ${canModAlbum ? `
-                                    <div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onclick="event.stopPropagation(); openEditAlbumModal('${safeEncode(alb)}')" class="p-2 bg-black/80 backdrop-blur-sm rounded-lg text-white hover:bg-blue-500 transition-colors" title="Modifier">
+                                    <div class="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                                        <button onclick="event.stopPropagation(); event.preventDefault(); openEditAlbumModal('${safeEncode(alb)}')" class="p-2.5 bg-blue-600 backdrop-blur-sm rounded-lg text-white hover:bg-blue-700 active:scale-95 transition-all shadow-lg hover:shadow-blue-500/50 cursor-pointer" title="Modifier">
                                             <i data-lucide="edit-2" class="w-4 h-4"></i>
                                         </button>
-                                        <button onclick="event.stopPropagation(); deleteAlbum('${safeEncode(alb)}')" class="p-2 bg-black/80 backdrop-blur-sm rounded-lg text-white hover:bg-red-500 transition-colors" title="Supprimer">
+                                        <button onclick="event.stopPropagation(); event.preventDefault(); deleteAlbum('${safeEncode(alb)}')" class="p-2.5 bg-red-600 backdrop-blur-sm rounded-lg text-white hover:bg-red-700 active:scale-95 transition-all shadow-lg hover:shadow-red-500/50 cursor-pointer" title="Supprimer">
                                             <i data-lucide="trash" class="w-4 h-4"></i>
                                         </button>
                                     </div>
