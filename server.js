@@ -8,7 +8,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 console.log('🎬 Spider Music Server starting...');
-console.log(`📍 PORT: ${PORT}`);
+console.log(`📍 Environment PORT: ${process.env.PORT || 'not set'}`);
+console.log(`📍 Using PORT: ${PORT}`);
 console.log(`📁 Working dir: ${__dirname}`);
 
 // Middleware
@@ -232,7 +233,7 @@ async function start() {
     await migrateData();
 
     // Start server
-    const server = app.listen(PORT, '0.0.0.0', () => {
+    const server = app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`✅ Ready for requests`);
     });
