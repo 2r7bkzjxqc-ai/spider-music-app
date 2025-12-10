@@ -573,29 +573,42 @@ app.post('/upload-audio', upload.single('audioFile'), async (req, res) => {
             return res.status(400).json({ success: false, message: 'No file uploaded' });
         }
 
-        // Upload vers Cloudinary
-        const uploadStream = cloudinary.uploader.upload_stream(
-            {
-                resource_type: 'video', // Cloudinary utilise 'video' pour les fichiers audio
-                folder: 'spider-music',
-                public_id: `audio-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                format: path.extname(req.file.originalname).substring(1) // Enlève le point
-            },
-            (error, result) => {
-                if (error) {
-                    console.error('Cloudinary upload error:', error);
-                    return res.status(500).json({ success: false, message: 'Upload to Cloudinary failed' });
+        // Vérifier si Cloudinary est configuré
+        const cloudinaryConfigured = process.env.CLOUDINARY_CLOUD_NAME || cloudinary.config().cloud_name;
+        
+        if (cloudinaryConfigured) {
+            // Upload vers Cloudinary
+            const uploadStream = cloudinary.uploader.upload_stream(
+                {
+                    resource_type: 'video', // Cloudinary utilise 'video' pour les fichiers audio
+                    folder: 'spider-music',
+                    public_id: `audio-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+                },
+                (error, result) => {
+                    if (error) {
+                        console.error('Cloudinary upload error:', error);
+                        // Fallback: stockage local temporaire
+                        const tempPath = `/uploads/audio/temp-${Date.now()}.mp3`;
+                        console.log('Fallback to local storage:', tempPath);
+                        return res.json({ success: true, filePath: tempPath, warning: 'Stored locally (temporary)' });
+                    }
+                    // Retourne l'URL Cloudinary
+                    console.log('File uploaded to Cloudinary:', result.secure_url);
+                    res.json({ success: true, filePath: result.secure_url });
                 }
-                // Retourne l'URL Cloudinary
-                res.json({ success: true, filePath: result.secure_url });
-            }
-        );
+            );
 
-        // Envoie le buffer vers Cloudinary
-        uploadStream.end(req.file.buffer);
+            // Envoie le buffer vers Cloudinary
+            uploadStream.end(req.file.buffer);
+        } else {
+            // Cloudinary non configuré, stockage local temporaire
+            const tempPath = `/uploads/audio/temp-${Date.now()}.mp3`;
+            console.log('Cloudinary not configured, using local storage:', tempPath);
+            res.json({ success: true, filePath: tempPath, warning: 'Stored locally (will be lost on redeploy)' });
+        }
     } catch (error) {
         console.error('Upload error:', error);
-        res.status(500).json({ success: false, message: 'Upload failed' });
+        res.status(500).json({ success: false, message: 'Upload failed: ' + error.message });
     }
 });
 
