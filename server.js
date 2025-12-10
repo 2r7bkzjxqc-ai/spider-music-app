@@ -735,6 +735,9 @@ async function startServer() {
             console.log(`☁️  Cloudinary: Configured for uploads`);
         });
 
+        // Keep server alive
+        server.keepAliveTimeout = 65000;
+
         // Global error handlers
         process.on('uncaughtException', (err) => {
             console.error('❌ Uncaught Exception:', err);
@@ -744,10 +747,33 @@ async function startServer() {
             console.error('❌ Unhandled Rejection:', reason);
         });
 
+        process.on('SIGTERM', () => {
+            console.log('📴 SIGTERM received, shutting down gracefully...');
+            server.close(() => {
+                console.log('🛑 Server closed');
+                process.exit(0);
+            });
+        });
+
+        process.on('SIGINT', () => {
+            console.log('⛔ SIGINT received, shutting down gracefully...');
+            server.close(() => {
+                console.log('🛑 Server closed');
+                process.exit(0);
+            });
+        });
+
         server.on('error', (err) => {
             console.error('❌ Server error:', err);
         });
+
+        console.log('✅ All systems ready. Server is listening...');
     } catch (err) {
+        console.error('❌ Server startup error:', err.message);
+        console.error(err.stack);
+        process.exit(1);
+    }
+}
         console.error('❌ Server startup error:', err.message);
         process.exit(1);
     }
