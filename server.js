@@ -6,11 +6,47 @@ const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
+const crypto = require('crypto');
 
 const PORT = parseInt(process.env.PORT, 10) || 3000;
 const app = express();
 
 process.stdout.write(`✅ PORT=${PORT}\n`);
+
+// ==================== DECRYPTION HELPER ====================
+
+function decryptFile(filePath, encryptionKey) {
+  const encPath = filePath + '.enc';
+  
+  // If plain file exists, use it (for local dev)
+  if (fs.existsSync(filePath)) {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  }
+  
+  // If encrypted file exists, decrypt it
+  if (fs.existsSync(encPath) && encryptionKey) {
+    try {
+      const data = fs.readFileSync(encPath, 'utf8');
+      const [ivHex, encrypted] = data.split(':');
+      
+      const iv = Buffer.from(ivHex, 'hex');
+      const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(encryptionKey, 'hex'), iv);
+      
+      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      
+      return JSON.parse(decrypted);
+    } catch (err) {
+      process.stdout.write(`⚠️  Failed to decrypt ${filePath}: ${err.message}\n`);
+      return [];
+    }
+  }
+  
+  return [];
+}
+
+// Get encryption key from environment
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 
 // ==================== MIDDLEWARE ====================
 app.use(express.json());
@@ -88,9 +124,9 @@ const Notification = mongoose.model('Notification', notificationSchema);
 
 function loadJSON(filePath) {
   try {
-    if (!fs.existsSync(filePath)) return [];
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    return decryptFile(filePath, ENCRYPTION_KEY);
   } catch (err) {
+    process.stdout.write(`⚠️  loadJSON error for ${filePath}: ${err.message}\n`);
     return [];
   }
 }
