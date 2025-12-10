@@ -6,7 +6,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 console.log('🎬 Minimal server starting...');
-console.log(`📍 PORT: ${PORT}`);
+console.log(`📍 PORT env: ${process.env.PORT}`);
+console.log(`📍 Using PORT: ${PORT}`);
+console.log(`📍 NODE_ENV: ${process.env.NODE_ENV}`);
 console.log(`📁 Working dir: ${__dirname}`);
 
 // Middleware BEFORE routes
@@ -74,6 +76,10 @@ const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`✅ Ready to receive requests`);
 });
+
+// Keep connections alive for Railway
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 66000;
 
 process.on('uncaughtException', (err) => {
     console.error('❌ UNCAUGHT EXCEPTION:', err);
