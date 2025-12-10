@@ -254,6 +254,9 @@ app.use((req, res) => {
 // ============= STARTUP =============
 async function start() {
     try {
+        console.log('🎬 Server startup initiated');
+        console.log('📡 Attempting MongoDB connection...');
+        
         // Connect to MongoDB
         const MONGODB_URI = process.env.MONGODB_URI;
         if (!MONGODB_URI) {
@@ -262,18 +265,27 @@ async function start() {
             return;
         }
 
-        console.log('📡 Connecting to MongoDB...');
-        await mongoose.connect(MONGODB_URI, {
-            serverSelectionTimeoutMS: 10000,
-            socketTimeoutMS: 10000,
-            connectTimeoutMS: 10000,
-        });
-        console.log('✅ MongoDB connected');
+        console.log('🔗 URI configured, connecting...');
+        
+        try {
+            await mongoose.connect(MONGODB_URI, {
+                serverSelectionTimeoutMS: 5000,
+                socketTimeoutMS: 5000,
+                connectTimeoutMS: 5000,
+            });
+            console.log('✅ MongoDB connected');
+        } catch (mongoErr) {
+            console.error('⚠️  MongoDB connection failed, continuing without DB:', mongoErr.message);
+            startServer();
+            return;
+        }
 
         // Check if data exists
+        console.log('📊 Checking database contents...');
         const userCount = await User.countDocuments();
         const songCount = await Song.countDocuments();
         const genreCount = await Genre.countDocuments();
+        console.log(`📊 DB Status: ${userCount} users, ${songCount} songs, ${genreCount} genres`);
 
         if (userCount === 0 || songCount === 0 || genreCount === 0) {
             console.log('🔄 MongoDB is empty. Loading data from JSON files...');
@@ -326,29 +338,43 @@ async function start() {
         startServer();
     } catch (err) {
         console.error('❌ Startup error:', err.message);
-        process.exit(1);
+        console.error(err.stack);
+        // Don't exit, try to start server anyway
+        startServer();
     }
 }
 
 function startServer() {
+    console.log('🎯 Starting Express server...');
     const server = app.listen(PORT, '0.0.0.0', () => {
         console.log(`🚀 Server running on port ${PORT}`);
         console.log(`✅ Ready to receive requests`);
+        console.log(`📍 Access at http://localhost:${PORT}`);
+    });
+
+    server.on('error', (err) => {
+        console.error('❌ Server error:', err);
     });
 
     // Graceful shutdown
     process.on('SIGTERM', () => {
-        console.log('SIGTERM received, shutting down');
-        server.close(() => process.exit(0));
+        console.log('📴 SIGTERM received, shutting down gracefully');
+        server.close(() => {
+            console.log('✅ Server closed');
+            process.exit(0);
+        });
     });
 
     process.on('SIGINT', () => {
-        console.log('SIGINT received, shutting down');
-        server.close(() => process.exit(0));
+        console.log('⛔ SIGINT received, shutting down gracefully');
+        server.close(() => {
+            console.log('✅ Server closed');
+            process.exit(0);
+        });
     });
 
     process.on('uncaughtException', (err) => {
-        console.error('Uncaught Exception:', err);
+        console.error('❌ Uncaught Exception:', err);
     });
 }
 
