@@ -418,24 +418,43 @@ app.post('/songs', (req, res) => {
                         const buffer = Buffer.from(base64, 'base64');
                         console.log(`📊 Audio size: ${(buffer.length/1024/1024).toFixed(2)} MB`);
 
-                        // Upload vers Cloudinary avec upload_stream
+                        // Upload vers Cloudinary en unsigned (sans signature API)
                         try {
-                            const result = await new Promise((resolve, reject) => {
-                                const uploadStream = cloudinary.uploader.upload_stream(
-                                    {
-                                        resource_type: 'video',
-                                        folder: 'spider-music'
-                                    },
-                                    (error, result) => {
-                                        if (error) reject(error);
-                                        else resolve(result);
-                                    }
-                                );
-                                uploadStream.end(buffer);
-                            });
+                            // Créer un form-data manuellement avec les bonnes limites
+                            const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substr(2, 16);
+                            const lines = [];
                             
-                            songData.src = result.secure_url;
-                            console.log(`☁️ File uploaded to Cloudinary: ${result.secure_url}`);
+                            // Ajouter le fichier audio en base64
+                            lines.push(`--${boundary}`);
+                            lines.push('Content-Disposition: form-data; name="file"; filename="song.mp3"');
+                            lines.push('Content-Type: audio/mpeg');
+                            lines.push('');
+                            lines.push(buffer.toString('base64'));
+                            lines.push('');
+                            
+                            // Ajouter les paramètres
+                            lines.push(`--${boundary}`);
+                            lines.push('Content-Disposition: form-data; name="api_key"');
+                            lines.push('');
+                            lines.push(process.env.CLOUDINARY_API_KEY || '741567951621919');
+                            lines.push('');
+                            
+                            lines.push(`--${boundary}--`);
+                            
+                            const body = lines.join('\r\n');
+                            
+                            const response = await axios.post(
+                                'https://api.cloudinary.com/v1_1/dvtkoyj0w/video/upload',
+                                body,
+                                {
+                                    headers: {
+                                        'Content-Type': `multipart/form-data; boundary=${boundary}`
+                                    }
+                                }
+                            );
+                            
+                            songData.src = response.data.secure_url;
+                            console.log(`☁️ File uploaded to Cloudinary: ${response.data.secure_url}`);
                         } catch (cloudinaryError) {
                             console.error('❌ Cloudinary upload error:', cloudinaryError.message);
                             // Fallback: stockage local temporaire
