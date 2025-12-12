@@ -937,7 +937,7 @@ app.use((req, res) => {
 
 async function start() {
   try {
-    const MONGODB_URI = 'mongodb+srv://xdhnexvk_db_user:0LuFkTEqSbciy1GG@cluster0.bsyygmm.mongodb.net/spider-music?retryWrites=true&w=majority';
+    const MONGODB_URI = process.env.MONGODB_URI;
 
     process.stdout.write('🔗 Connecting to MongoDB...\n');
     await mongoose.connect(MONGODB_URI, {

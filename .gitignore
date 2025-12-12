@@ -5,7 +5,6 @@ node_modules/
 *.bak
 uploads/
 users.json
-songs.json
 posts.json
 notifications.json
 playlists.json
