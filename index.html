@@ -4161,8 +4161,32 @@
             }
         }
         
-        function handleAvatarSelect(input) { handleSingleFileSelect(input, 'avatarData'); }
-        function handleBannerSelect(input) { handleSingleFileSelect(input, 'bannerData'); }
+        function handleAvatarSelect(input) { 
+            if(input.files[0]) {
+                const file = input.files[0];
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const base64 = e.target.result;
+                    document.getElementById('avatarData').value = base64;
+                    document.getElementById('avatarPreview').src = base64;
+                    document.getElementById('avatarPreview').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        function handleBannerSelect(input) { 
+            if(input.files[0]) {
+                const file = input.files[0];
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const base64 = e.target.result;
+                    document.getElementById('bannerData').value = base64;
+                    document.getElementById('bannerPreview').src = base64;
+                    document.getElementById('bannerPreview').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
@@ -4596,36 +4620,52 @@
         }
 
         async function updateProfile() {
-            const avatar = document.getElementById('avatarData').value; 
-            const banner = document.getElementById('bannerData').value;
-            if(!avatar && !banner) {
+            let avatarUrl = document.getElementById('avatarUrlInput').value;
+            let bannerUrl = document.getElementById('bannerUrlInput').value;
+            
+            // If we have base64 data (from file upload), upload to server
+            const avatarBase64 = document.getElementById('avatarData').value;
+            const bannerBase64 = document.getElementById('bannerData').value;
+            
+            if (!avatarUrl && !bannerUrl) {
                 document.getElementById('profileModal').classList.add('hidden');
                 return;
             }
-            const payload = { username: currentUser.username }; 
-            if(avatar) payload.avatar = avatar; 
-            if(banner) payload.banner = banner;
-            try { 
-                const res = await fetch(`${ACTIVE_SERVER}/users/profile`, { 
-                    method: 'PUT', 
-                    headers: {'Content-Type': 'application/json'}, 
-                    body: JSON.stringify(payload) 
+            
+            const payload = { username: currentUser.username };
+            
+            // Send avatar/banner URLs to server to update MongoDB
+            if (avatarUrl) payload.avatar = avatarUrl;
+            if (bannerUrl) payload.banner = bannerUrl;
+            // If base64 provided, use that instead
+            if (avatarBase64) payload.avatar = avatarBase64;
+            if (bannerBase64) payload.banner = bannerBase64;
+            
+            try {
+                const res = await fetch(`${ACTIVE_SERVER}/users/profile`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
                 });
                 
-                // Update currentUser with fresh data from server
-                if(res.ok) {
+                if (res.ok) {
                     const updatedUser = await res.json();
-                    currentUser.avatar = updatedUser.avatar || currentUser.avatar;
-                    currentUser.banner = updatedUser.banner || currentUser.banner;
+                    // Update currentUser with response from server
+                    if (updatedUser.avatar) currentUser.avatar = updatedUser.avatar;
+                    if (updatedUser.banner) currentUser.banner = updatedUser.banner;
+                    
+                    // Save to localStorage
+                    localStorage.setItem('musicAppUser', JSON.stringify(currentUser));
+                    updateUserUI();
+                    showToast('Profil mis à jour !');
+                } else {
+                    console.error('Failed to update profile:', res.status);
+                    showToast('Erreur lors de la mise à jour');
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error('Profile update error:', e);
+                showToast('Erreur: ' + e.message);
             }
-            
-            // Save to localStorage
-            localStorage.setItem('musicAppUser', JSON.stringify(currentUser));
-            updateUserUI(); 
-            document.getElementById('profileModal').classList.add('hidden'); 
             
             // Reset form
             document.getElementById('avatarData').value = '';
@@ -4639,7 +4679,7 @@
             document.getElementById('avatarPreview').src = '';
             document.getElementById('bannerPreview').src = '';
             
-            showToast('Profil mis à jour !');
+            document.getElementById('profileModal').classList.add('hidden');
         }
 
         async function followUser(target) {
