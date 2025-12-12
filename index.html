@@ -524,7 +524,8 @@
     <audio id="player" style="display: none;"></audio>
 
     <script>
-        const SERVER = 'http://localhost:3000';
+        // Auto-detect server URL (works for both localhost and Railway)
+        const SERVER = window.location.origin;
         let songs = [];
         let users = [];
         let genres = [];
