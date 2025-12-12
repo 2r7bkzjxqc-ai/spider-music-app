@@ -456,19 +456,6 @@ app.post('/api/upload/audio', upload.single('file'), async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-        public_id: cloudinaryResult.public_id,
-        url: cloudinaryResult.secure_url,
-        duration: cloudinaryResult.duration
-      }
-    });
-  } catch (err) {
-    console.error('Upload error:', err);
-    res.status(500).json({ 
-      error: err.message,
-      details: err.message.includes('Unknown') ? 'Invalid Cloudinary credentials. Check .env file.' : 'Upload failed'
-    });
-  }
-});
 
 // ADD SOUNDCLOUD TRACK TO DATABASE
 app.post('/api/soundcloud/add', async (req, res) => {
