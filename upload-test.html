@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloudinary Upload Test - Spider Music</title>
+    <title>Upload Cloudinary - Spider Music</title>
     <style>
         * {
             margin: 0;
@@ -12,7 +12,7 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
@@ -75,12 +75,6 @@
             cursor: pointer;
         }
 
-        .file-info {
-            color: #999;
-            font-size: 12px;
-            margin-top: 4px;
-        }
-
         button {
             width: 100%;
             padding: 14px;
@@ -99,17 +93,13 @@
             box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
         }
 
-        button:active {
-            transform: translateY(0);
-        }
-
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
 
         .status {
-            margin-top: 30px;
+            margin-top: 20px;
             padding: 16px;
             border-radius: 8px;
             font-size: 14px;
@@ -152,118 +142,61 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-
-        .test-section {
-            margin-top: 40px;
-            padding-top: 30px;
-            border-top: 2px solid #e0e0e0;
-        }
-
-        .test-section h3 {
-            color: #333;
-            font-size: 16px;
-            margin-bottom: 15px;
-        }
-
-        .test-button {
-            background: #6c757d;
-            width: auto;
-            padding: 10px 20px;
-            display: inline-block;
-        }
-
-        .test-button:hover {
-            box-shadow: 0 10px 20px rgba(108, 117, 125, 0.3);
-        }
-
-        .response {
-            background: #f5f5f5;
-            padding: 16px;
-            border-radius: 8px;
-            font-size: 12px;
-            font-family: 'Monaco', 'Menlo', monospace;
-            overflow-x: auto;
-            margin-top: 15px;
-            display: none;
-        }
-
-        .response.show {
-            display: block;
-        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎵 Spider Music - Upload Test</h1>
-        <p class="subtitle">Upload audio files to Cloudinary</p>
+        <h1>🎵 Spider Music Upload</h1>
+        <p class="subtitle">Upload vers Cloudinary</p>
 
         <form id="uploadForm">
             <div class="form-group">
-                <label for="title">Song Title *</label>
-                <input type="text" id="title" name="title" placeholder="e.g., My Song" required>
+                <label for="title">Titre *</label>
+                <input type="text" id="title" name="title" placeholder="ex: Ma Chanson" required>
             </div>
 
             <div class="form-group">
-                <label for="artist">Artist Name</label>
-                <input type="text" id="artist" name="artist" placeholder="e.g., Artist Name">
+                <label for="artist">Artiste</label>
+                <input type="text" id="artist" name="artist" placeholder="ex: Mon Artiste">
             </div>
 
             <div class="form-group">
                 <label for="album">Album</label>
-                <input type="text" id="album" name="album" placeholder="e.g., Album Name">
+                <input type="text" id="album" name="album" placeholder="ex: Mon Album">
             </div>
 
             <div class="form-group">
-                <label for="file">Audio File *</label>
+                <label for="file">Fichier Audio *</label>
                 <input type="file" id="file" name="file" accept="audio/*" required>
-                <p class="file-info">Supported: MP3, WAV, FLAC, OGG (Max 100MB)</p>
             </div>
 
-            <button type="submit">Upload to Cloudinary</button>
+            <button type="submit">📤 Upload</button>
         </form>
 
         <div id="status" class="status"></div>
-
-        <div class="test-section">
-            <h3>🧪 Test Cloudinary Configuration</h3>
-            <button type="button" class="test-button" onclick="testCloudinary()">Test Connection</button>
-            <div id="testResponse" class="response"></div>
-        </div>
     </div>
 
     <script>
         const form = document.getElementById('uploadForm');
         const statusDiv = document.getElementById('status');
-        const fileInput = document.getElementById('file');
-
-        // File size validation
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file && file.size > 100 * 1024 * 1024) {
-                statusDiv.className = 'status error';
-                statusDiv.textContent = '❌ File too large (max 100MB)';
-                fileInput.value = '';
-            }
-        });
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const title = document.getElementById('title').value.trim();
-            const artist = document.getElementById('artist').value.trim() || 'Unknown Artist';
-            const album = document.getElementById('album').value.trim() || 'Unknown Album';
-            const file = fileInput.files[0];
+            const artist = document.getElementById('artist').value.trim() || 'Unknown';
+            const album = document.getElementById('album').value.trim() || 'Unknown';
+            const file = document.getElementById('file').files[0];
 
             if (!title || !file) {
                 statusDiv.className = 'status error';
-                statusDiv.textContent = '❌ Please fill all required fields';
+                statusDiv.textContent = '❌ Titre et fichier requis';
                 return;
             }
 
-            // Show loading
             statusDiv.className = 'status loading';
-            statusDiv.innerHTML = '<span class="loading-spinner"></span> Uploading to Cloudinary...';
-            form.querySelector('button[type="submit"]').disabled = true;
+            statusDiv.innerHTML = '<span class="loading-spinner"></span> Upload en cours...';
+            form.querySelector('button').disabled = true;
 
             try {
                 const formData = new FormData();
@@ -272,12 +205,6 @@
                 formData.append('artist', artist);
                 formData.append('album', album);
 
-                console.log('📤 Uploading file:', {
-                    name: file.name,
-                    size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
-                    type: file.type
-                });
-
                 const response = await fetch('/api/upload/audio', {
                     method: 'POST',
                     body: formData
@@ -285,61 +212,21 @@
 
                 const data = await response.json();
 
-                console.log('📡 Server response:', data);
-
                 if (response.ok) {
                     statusDiv.className = 'status success';
-                    statusDiv.innerHTML = `✅ Upload successful!<br>
-                        <small>
-                        <strong>${data.song.title}</strong> by ${data.song.artist}<br>
-                        Song ID: <code>${data.song._id}</code><br>
-                        Duration: ${data.cloudinary.duration || '?'}s<br>
-                        Cloudinary: <a href="${data.cloudinary.url}" target="_blank" style="color: #155724; text-decoration: underline;">Play</a> | 
-                        <a href="https://console.cloudinary.com/" target="_blank" style="color: #155724; text-decoration: underline;">Dashboard</a>
-                        </small>`;
+                    statusDiv.innerHTML = `✅ Succès!<br><small><strong>${data.song.title}</strong> par ${data.song.artist}<br>📁 Sauvegardé dans MongoDB</small>`;
                     form.reset();
                 } else {
                     statusDiv.className = 'status error';
-                    const errorMsg = data.error || 'Upload failed';
-                    const details = data.details ? ` - ${data.details}` : '';
-                    statusDiv.textContent = '❌ ' + errorMsg + details;
-                    console.error('❌ Upload error:', data);
+                    statusDiv.textContent = '❌ ' + (data.error || 'Erreur upload');
                 }
             } catch (error) {
                 statusDiv.className = 'status error';
                 statusDiv.textContent = '❌ ' + error.message;
-                console.error('❌ Exception:', error);
             } finally {
-                form.querySelector('button[type="submit"]').disabled = false;
+                form.querySelector('button').disabled = false;
             }
         });
-
-        async function testCloudinary() {
-            const testResponse = document.getElementById('testResponse');
-            testResponse.textContent = '';
-            testResponse.classList.remove('show');
-
-            try {
-                const response = await fetch('/api/test/cloudinary');
-                const data = await response.json();
-
-                testResponse.classList.add('show');
-                testResponse.textContent = JSON.stringify(data, null, 2);
-
-                if (response.ok && data.status) {
-                    statusDiv.className = 'status success';
-                    statusDiv.textContent = '✅ Cloudinary is properly configured!';
-                } else {
-                    statusDiv.className = 'status error';
-                    statusDiv.textContent = '❌ Cloudinary configuration issue';
-                }
-            } catch (error) {
-                testResponse.classList.add('show');
-                testResponse.textContent = JSON.stringify({ error: error.message }, null, 2);
-                statusDiv.className = 'status error';
-                statusDiv.textContent = '❌ Connection failed: ' + error.message;
-            }
-        }
     </script>
 </body>
 </html>
