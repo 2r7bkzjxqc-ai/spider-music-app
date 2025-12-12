@@ -24,16 +24,30 @@ console.log('🎵 Starting audio file upload to Cloudinary...');
 console.log('📁 Source folder:', MUSIC_FOLDER);
 console.log('☁️ Cloud Name:', process.env.CLOUDINARY_CLOUD_NAME);
 
-// Read all audio files
-const audioExtensions = ['.mp3', '.wav', '.flac', '.ogg', '.m4a'];
+// Read all audio files recursively
+const audioExtensions = ['.mp3', '.wav', '.flac', '.ogg', '.m4a', '.mpeg'];
 let audioFiles = [];
 
-if (fs.existsSync(MUSIC_FOLDER)) {
-  const files = fs.readdirSync(MUSIC_FOLDER);
-  audioFiles = files.filter(file => {
-    const ext = path.extname(file).toLowerCase();
-    return audioExtensions.includes(ext);
+function getAllAudioFiles(dir) {
+  const files = fs.readdirSync(dir);
+  files.forEach(file => {
+    const filePath = path.join(dir, file);
+    const stat = fs.statSync(filePath);
+    
+    if (stat.isDirectory()) {
+      // Recursively search subdirectories
+      getAllAudioFiles(filePath);
+    } else {
+      const ext = path.extname(file).toLowerCase();
+      if (audioExtensions.includes(ext)) {
+        audioFiles.push(filePath); // Store full path
+      }
+    }
   });
+}
+
+if (fs.existsSync(MUSIC_FOLDER)) {
+  getAllAudioFiles(MUSIC_FOLDER);
   console.log(`📊 Found ${audioFiles.length} audio files\n`);
 } else {
   console.error(`❌ Folder not found: ${MUSIC_FOLDER}`);
@@ -103,10 +117,31 @@ async function uploadAll() {
   let failed = 0;
   let skipped = 0;
 
+  // Read songs.json once to check for existing Cloudinary URLs
+  const songsFile = path.join(__dirname, 'songs.json');
+  let songs = [];
+  if (fs.existsSync(songsFile)) {
+    songs = JSON.parse(fs.readFileSync(songsFile, 'utf8'));
+  }
+
   for (let i = 0; i < audioFiles.length; i++) {
-    const fileName = audioFiles[i];
-    const filePath = path.join(MUSIC_FOLDER, fileName);
+    const filePath = audioFiles[i]; // Full path already
+    const fileName = path.basename(filePath); // Extract just the filename
     const progress = `[${i + 1}/${audioFiles.length}]`;
+
+    // Check if this song already has a Cloudinary URL
+    const fileNameWithoutExt = path.basename(fileName, path.extname(fileName));
+    const existingSong = songs.find(s => {
+      const songTitle = s.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const fName = fileNameWithoutExt.toLowerCase().replace(/[^a-z0-9]/g, '');
+      return songTitle === fName || s.title.toLowerCase().includes(fileNameWithoutExt.toLowerCase());
+    });
+
+    if (existingSong && existingSong.src && existingSong.src.includes('cloudinary')) {
+      console.log(`⏭️  ${progress} ${fileName} already has Cloudinary URL, skipping...`);
+      skipped++;
+      continue;
+    }
 
     try {
       console.log(`📤 ${progress} Uploading ${fileName}...`);
