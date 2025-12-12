@@ -310,7 +310,11 @@ async function loginHandler(req, res) {
     res.json({
       id: user._id,
       username: user.username,
-      avatar: user.avatar
+      avatar: user.avatar,
+      role: user.role || 'user',
+      following: user.following || [],
+      followers: user.followers || [],
+      likedAlbums: user.likedAlbums || []
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -339,7 +343,11 @@ async function registerHandler(req, res) {
     res.json({
       id: user._id,
       username: user.username,
-      avatar: user.avatar
+      avatar: user.avatar,
+      role: user.role || 'user',
+      following: user.following || [],
+      followers: user.followers || [],
+      likedAlbums: user.likedAlbums || []
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
