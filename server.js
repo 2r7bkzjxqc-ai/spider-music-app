@@ -1,12 +1,23 @@
 #!/usr/bin/env node
 process.stdout.write('✅ NODE STARTING\n');
 
+// Load environment variables
+require('dotenv').config();
+
 const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
 const crypto = require('crypto');
+const cloudinary = require('cloudinary').v2;
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 const PORT = parseInt(process.env.PORT, 10) || 3000;
 const app = express();
@@ -48,6 +59,10 @@ function decryptFile(filePath, encryptionKey) {
 // Get encryption key from environment
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 
+// ==================== MULTER SETUP ====================
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
+
 // ==================== MIDDLEWARE ====================
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -68,10 +83,16 @@ const songSchema = new mongoose.Schema({
   title: String,
   artist: String,
   genre: String,
+  album: String,
   cover: String,
-  src: String,
+  src: String,                  // URL audio (local, Cloudinary, ou SoundCloud)
+  platform: { type: String, default: 'local' }, // 'local', 'cloudinary', 'soundcloud'
+  externalId: String,          // SoundCloud track ID or Cloudinary ID
+  externalUrl: String,         // Link to original source (SoundCloud permalink)
+  duration: Number,            // Duration in milliseconds
   likes: [String],
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
 });
 
 const playlistSchema = new mongoose.Schema({
@@ -342,6 +363,196 @@ async function songByIdHandler(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
+
+// ==================== EXTERNAL MUSIC SOURCES ====================
+
+// TEST CLOUDINARY CONFIG
+app.get('/api/test/cloudinary', async (req, res) => {
+  try {
+    const config = cloudinary.config();
+    if (!config.cloud_name || !config.api_key) {
+      return res.status(500).json({ 
+        error: 'Cloudinary not configured',
+        config: {
+          cloud_name: config.cloud_name || 'NOT SET',
+          api_key: config.api_key ? '***' : 'NOT SET'
+        }
+      });
+    }
+    res.json({ 
+      status: 'Cloudinary configured ✅',
+      cloud_name: config.cloud_name,
+      upload_preset: process.env.CLOUDINARY_UPLOAD_PRESET || 'NOT SET'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// SEARCH SOUNDCLOUD TRACKS
+app.get('/api/soundcloud/search', async (req, res) => {
+  try {
+    const { q, limit = 20 } = req.query;
+    if (!q) return res.status(400).json({ error: 'Query required' });
+    
+    // Note: Direct SoundCloud API integration requires proper setup
+    // For now, return placeholder
+    res.json({ 
+      message: 'SoundCloud search endpoint',
+      status: 'requires-setup',
+      note: 'Configure SOUNDCLOUD_CLIENT_ID environment variable'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// UPLOAD AUDIO FILE TO CLOUDINARY
+app.post('/api/upload/audio', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file provided' });
+    }
+
+    const { title, artist, album } = req.body;
+    if (!title) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+
+    // Upload to Cloudinary with unsigned preset (no API secret needed)
+    const uploadPromise = new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          resource_type: 'auto',
+          folder: 'spider-music',
+          public_id: `${Date.now()}_${title.replace(/\s+/g, '_').substring(0, 30)}`,
+          quality: 'auto',
+          secure: true
+        },
+        (error, result) => {
+          if (error) {
+            console.error('Cloudinary error:', error);
+            reject(error);
+          } else {
+            resolve(result);
+          }
+        }
+      );
+      stream.on('error', (error) => {
+        console.error('Stream error:', error);
+        reject(error);
+      });
+      stream.end(req.file.buffer);
+    });
+
+    const cloudinaryResult = await uploadPromise;
+    
+    // Create song entry
+    const song = new Song({
+      title,
+      artist: artist || 'Unknown Artist',
+      album: album || 'Unknown Album',
+      cover: 'https://via.placeholder.com/300/121212/FFFFFF?text=Uploaded',
+      src: cloudinaryResult.secure_url,
+      platform: 'cloudinary',
+      externalId: cloudinaryResult.public_id,
+      duration: Math.floor(cloudinaryResult.duration || 0),
+      genre: 'Music'
+    });
+
+    await song.save();
+    
+    res.json({ 
+      message: 'Audio uploaded successfully',
+      song,
+      cloudinary: {
+        public_id: cloudinaryResult.public_id,
+        url: cloudinaryResult.secure_url,
+        duration: cloudinaryResult.duration
+      }
+    });
+  } catch (err) {
+    console.error('Upload error:', err);
+    res.status(500).json({ 
+      error: err.message,
+      details: err.message.includes('Unknown') ? 'Invalid Cloudinary credentials. Check .env file.' : 'Upload failed'
+    });
+  }
+});
+
+// ADD SOUNDCLOUD TRACK TO DATABASE
+app.post('/api/soundcloud/add', async (req, res) => {
+  try {
+    const { trackId, title, artist, cover, src, duration } = req.body;
+    
+    if (!trackId || !title || !src) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Check if track already exists
+    const existing = await Song.findOne({ externalId: trackId, platform: 'soundcloud' });
+    if (existing) {
+      return res.status(409).json({ error: 'Track already in database' });
+    }
+
+    const song = new Song({
+      title,
+      artist: artist || 'Unknown Artist',
+      cover: cover || 'https://via.placeholder.com/300/121212/FFFFFF?text=SoundCloud',
+      src,
+      platform: 'soundcloud',
+      externalId: trackId,
+      externalUrl: `https://soundcloud.com/${artist}/${title}`,
+      duration: duration || 0,
+      likes: [],
+      genre: 'Music'
+    });
+
+    await song.save();
+    res.json({ message: 'Track added successfully', song });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// UPLOAD TO CLOUDINARY ENDPOINT
+app.post('/api/songs/upload-cloudinary', async (req, res) => {
+  try {
+    const { title, artist, cover, cloudinaryUrl, duration = 0 } = req.body;
+    
+    if (!title || !cloudinaryUrl) {
+      return res.status(400).json({ error: 'Missing title or cloudinaryUrl' });
+    }
+
+    const song = new Song({
+      title,
+      artist: artist || 'Unknown Artist',
+      cover: cover || 'https://via.placeholder.com/300/121212/FFFFFF?text=Uploaded',
+      src: cloudinaryUrl,
+      platform: 'cloudinary',
+      externalId: cloudinaryUrl.split('/').pop(),
+      duration,
+      likes: [],
+      genre: 'Music'
+    });
+
+    await song.save();
+    res.json({ message: 'Song uploaded successfully', song });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET ALL USER UPLOADED SONGS
+app.get('/api/songs/platform/:platform', async (req, res) => {
+  try {
+    const { platform } = req.params;
+    const songs = await Song.find({ platform }).limit(100);
+    res.json(songs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // GET ALL USERS
 app.get('/api/users', usersHandler);
