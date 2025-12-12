@@ -4224,10 +4224,25 @@
         function logout() { localStorage.removeItem('musicAppUser'); location.reload(); }
         function updateUserUI() {
             if(!currentUser) return;
+            console.log('🔍 Current user:', currentUser);
+            console.log('👤 Role:', currentUser.role);
             document.getElementById('userInfo').innerText = currentUser.username;
-            document.getElementById('userRole').innerText = currentUser.role;
+            document.getElementById('userRole').innerText = currentUser.role || 'User';
             document.getElementById('userAvatar').src = currentUser.avatar || "https://via.placeholder.com/150";
-            if(['admin','superadmin'].includes(currentUser.role)) { document.getElementById('adminPanel').classList.remove('hidden'); document.getElementById('navAdmin').classList.remove('hidden'); }
+            
+            // Show admin panel if user is admin or superadmin
+            const isAdmin = currentUser.role === 'admin' || currentUser.role === 'superadmin';
+            console.log('👑 Is admin?', isAdmin);
+            
+            if(isAdmin) { 
+                console.log('✅ Showing admin panel and nav');
+                const adminPanel = document.getElementById('adminPanel');
+                const navAdmin = document.getElementById('navAdmin');
+                if(adminPanel) adminPanel.classList.remove('hidden');
+                if(navAdmin) navAdmin.classList.remove('hidden');
+            } else {
+                console.log('❌ Not admin, hiding admin panel');
+            }
         }
 
         function renderSongs(list) {
