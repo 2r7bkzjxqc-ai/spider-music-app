@@ -11,6 +11,7 @@ const fs = require('fs');
 const cors = require('cors');
 const crypto = require('crypto');
 const cloudinary = require('cloudinary').v2;
+const { createClient } = require('@supabase/supabase-js');
 
 // Configure Cloudinary
 cloudinary.config({
@@ -18,6 +19,12 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SECRET_KEY
+);
 
 const PORT = parseInt(process.env.PORT, 10) || 3000;
 const app = express();
@@ -409,7 +416,7 @@ app.get('/api/soundcloud/search', async (req, res) => {
   }
 });
 
-// UPLOAD AUDIO FILE TO CLOUDINARY
+// UPLOAD AUDIO FILE TO SUPABASE STORAGE
 app.post('/api/upload/audio', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
@@ -421,20 +428,41 @@ app.post('/api/upload/audio', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'Title is required' });
     }
 
-    // Convert file buffer to base64
-    const audioBase64 = req.file.buffer.toString('base64');
-    const audioSize = req.file.buffer.length;
-    
-    // Create song entry with audio data in MongoDB
+    // Generate unique filename
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substring(2, 8);
+    const fileName = `${timestamp}_${randomStr}_${req.file.originalname}`;
+
+    // Upload to Supabase Storage
+    const { data, error } = await supabase
+      .storage
+      .from(process.env.SUPABASE_BUCKET_NAME)
+      .upload(fileName, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: false
+      });
+
+    if (error) {
+      console.error('Supabase upload error:', error);
+      return res.status(500).json({ error: 'Failed to upload file to storage' });
+    }
+
+    // Get public URL from Supabase
+    const { data: publicData } = supabase
+      .storage
+      .from(process.env.SUPABASE_BUCKET_NAME)
+      .getPublicUrl(fileName);
+
+    const publicUrl = publicData.publicUrl;
+
+    // Create song entry with Supabase URL in MongoDB
     const song = new Song({
       title,
       artist: artist || 'Unknown Artist',
       album: album || 'Unknown Album',
       cover: 'https://via.placeholder.com/300/121212/FFFFFF?text=Uploaded',
-      src: `/api/audio/${Date.now()}`, // Local reference
-      audioData: audioBase64,
-      audioSize,
-      platform: 'mongodb',
+      src: publicUrl, // Supabase URL
+      platform: 'supabase',
       duration: 0,
       genre: 'Music'
     });
@@ -442,13 +470,13 @@ app.post('/api/upload/audio', upload.single('file'), async (req, res) => {
     await song.save();
     
     res.json({ 
-      message: 'Audio uploaded successfully to MongoDB',
+      message: 'Audio uploaded successfully to Supabase',
       song: {
         id: song._id,
         title: song.title,
         artist: song.artist,
-        audioSize: audioSize,
-        platform: 'mongodb'
+        src: publicUrl,
+        platform: 'supabase'
       }
     });
   } catch (err) {
