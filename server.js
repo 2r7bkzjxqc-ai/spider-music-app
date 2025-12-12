@@ -939,6 +939,16 @@ async function start() {
   try {
     const MONGODB_URI = process.env.MONGODB_URI;
 
+    if (!MONGODB_URI) {
+      process.stdout.write('⚠️  WARNING: MONGODB_URI not set! Using demo mode.\n');
+      // Start server anyway without MongoDB
+      const server = app.listen(PORT, '0.0.0.0', () => {
+        process.stdout.write(`🚀 SERVER ON PORT ${PORT} (DEMO MODE)\n`);
+        process.stdout.write('⚠️  No database connection\n');
+      });
+      return;
+    }
+
     process.stdout.write('🔗 Connecting to MongoDB...\n');
     await mongoose.connect(MONGODB_URI, {
       serverSelectionTimeoutMS: 10000,
@@ -961,7 +971,12 @@ async function start() {
     });
   } catch (err) {
     process.stderr.write(`FAILED: ${err.message}\n`);
-    process.exit(1);
+    // Don't exit - try to start server anyway
+    process.stdout.write('⚠️  Attempting to start server without database...\n');
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      process.stdout.write(`🚀 SERVER ON PORT ${PORT} (FALLBACK MODE)\n`);
+      process.stdout.write('⚠️  Database connection failed\n');
+    });
   }
 }
 
