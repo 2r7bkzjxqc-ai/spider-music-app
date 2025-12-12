@@ -165,35 +165,94 @@ function loadJSON(filePath) {
 
 async function migrateData() {
   try {
-    // FORCE DELETE AND RECREATE
-    process.stdout.write('🔄 Clearing existing data...\n');
-    await User.deleteMany({});
-    await Song.deleteMany({});
-    await Playlist.deleteMany({});
-    await Post.deleteMany({});
-    await Genre.deleteMany({});
-    await Artist.deleteMany({});
-    await Notification.deleteMany({});
+    // Check if data already exists
+    const existingUsers = await User.countDocuments();
+    const existingSongs = await Song.countDocuments();
+    const existingNotifications = await Notification.countDocuments();
+    
+    process.stdout.write(`📊 Current MongoDB state: ${existingUsers} users, ${existingSongs} songs, ${existingNotifications} notifications\n`);
+    
+    // Only completely clear if both are empty
+    if (existingUsers === 0 && existingSongs === 0) {
+      process.stdout.write('🔄 Clearing existing data...\n');
+      await User.deleteMany({});
+      await Song.deleteMany({});
+      await Playlist.deleteMany({});
+      await Post.deleteMany({});
+      await Genre.deleteMany({});
+      await Artist.deleteMany({});
+      await Notification.deleteMany({});
+    }
 
     process.stdout.write(`📥 Migrating data...\n`);
 
-    const users = loadJSON(path.join(__dirname, 'users.json'));
-    if (users.length > 0) {
-      try {
-        const inserted = await User.insertMany(users);
-        process.stdout.write(`✅ ${inserted.length} users inserted\n`);
-      } catch (err) {
-        process.stdout.write(`⚠️ User insert error: ${err.message}\n`);
+    // Load and insert users if needed
+    if (existingUsers === 0) {
+      const users = loadJSON(path.join(__dirname, 'users.json'));
+      if (users.length > 0) {
+        try {
+          const inserted = await User.insertMany(users);
+          process.stdout.write(`✅ ${inserted.length} users inserted\n`);
+        } catch (err) {
+          process.stdout.write(`⚠️ User insert error: ${err.message}\n`);
+        }
+      } else {
+        // If no users loaded, create default admin user
+        process.stdout.write(`⚠️ No users found in file, creating default admin user...\n`);
+        try {
+          const defaultAdmin = new User({
+            username: 'Louka',
+            password: 'Ceta2007',
+            role: 'superadmin',
+            avatar: 'https://via.placeholder.com/150',
+            isOnline: true,
+            following: [],
+            followers: [],
+            likedAlbums: []
+          });
+          await defaultAdmin.save();
+          process.stdout.write(`✅ Default admin user (Louka) created\n`);
+        } catch (err) {
+          process.stdout.write(`⚠️ Default admin creation error: ${err.message}\n`);
+        }
       }
+    } else {
+      process.stdout.write(`✅ Users already exist in MongoDB, skipping user migration\n`);
     }
 
-    const songs = loadJSON(path.join(__dirname, 'songs.json'));
-    if (songs.length > 0) {
+    // Load and insert songs if needed
+    if (existingSongs === 0) {
+      const songs = loadJSON(path.join(__dirname, 'songs.json'));
+      if (songs.length > 0) {
+        try {
+          const inserted = await Song.insertMany(songs);
+          process.stdout.write(`✅ ${inserted.length} songs inserted\n`);
+        } catch (err) {
+          process.stdout.write(`⚠️ Song insert error: ${err.message}\n`);
+        }
+      }
+    } else {
+      process.stdout.write(`✅ Songs already exist in MongoDB (${existingSongs}), skipping song migration\n`);
+    }
+    
+    // Create default notifications for Louka if none exist
+    if (existingNotifications === 0) {
+      process.stdout.write(`📥 Creating default notifications...\n`);
       try {
-        const inserted = await Song.insertMany(songs);
-        process.stdout.write(`✅ ${inserted.length} songs inserted\n`);
+        const defaultNotifications = [
+          {
+            from: 'system',
+            to: 'Louka',
+            message: 'Welcome to Spider Music!',
+            type: 'info',
+            read: false,
+            createdAt: Date.now()
+          }
+        ];
+        await Notification.insertMany(defaultNotifications);
+        process.stdout.write(`✅ Default notifications created\n`);
       } catch (err) {
-        process.stdout.write(`⚠️ Song insert error: ${err.message}\n`);
+        process.stdout.write(`⚠️ Notification creation error: ${err.message}\n`);
       }
     }
 
