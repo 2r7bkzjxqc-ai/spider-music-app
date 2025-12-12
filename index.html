@@ -4606,17 +4606,27 @@
             if(avatar) payload.avatar = avatar; 
             if(banner) payload.banner = banner;
             try { 
-                await fetch(`${ACTIVE_SERVER}/users/profile`, { 
+                const res = await fetch(`${ACTIVE_SERVER}/users/profile`, { 
                     method: 'PUT', 
                     headers: {'Content-Type': 'application/json'}, 
                     body: JSON.stringify(payload) 
-                }); 
-            } catch(e) {}
-            if(avatar) currentUser.avatar = avatar; 
-            if(banner) currentUser.banner = banner;
+                });
+                
+                // Update currentUser with fresh data from server
+                if(res.ok) {
+                    const updatedUser = await res.json();
+                    currentUser.avatar = updatedUser.avatar || currentUser.avatar;
+                    currentUser.banner = updatedUser.banner || currentUser.banner;
+                }
+            } catch(e) {
+                console.error('Profile update error:', e);
+            }
+            
+            // Save to localStorage
             localStorage.setItem('musicAppUser', JSON.stringify(currentUser));
             updateUserUI(); 
             document.getElementById('profileModal').classList.add('hidden'); 
+            
             // Reset form
             document.getElementById('avatarData').value = '';
             document.getElementById('bannerData').value = '';
@@ -4628,6 +4638,9 @@
             document.getElementById('bannerPreview').classList.add('hidden');
             document.getElementById('avatarPreview').src = '';
             document.getElementById('bannerPreview').src = '';
+            
+            showToast('Profil mis à jour !');
+        }
             showToast("Profil mis à jour"); 
             openUserProfile(safeEncode(currentUser.username));
         }

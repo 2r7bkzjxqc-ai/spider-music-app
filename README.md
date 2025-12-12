@@ -1,17 +1,18 @@
 # Spider Music 🎵
 
-A beautiful music streaming web app built with Node.js, Express, MongoDB, and Supabase Storage.
+A beautiful music streaming web app to listen to and discover music. Built with Node.js, Express, MongoDB, and Supabase Storage.
 
 ## Features
 
 - 🎵 Stream music from SoundCloud
 - 👤 User authentication with roles (admin, superadmin, user)
-- 📤 Upload audio files to Supabase Storage
+- 📤 Upload your own audio files to Supabase Storage
 - 🎨 Beautiful dark theme UI with Tailwind CSS
 - 🔍 Search songs, artists, and playlists
 - ❤️ Like songs and manage playlists
 - 👥 Follow other users
 - 🎙️ Artist profiles
+- 🎛️ Full-featured music player
 
 ## Tech Stack
 
@@ -37,14 +38,18 @@ Required in `.env`:
 - `SUPABASE_SECRET_KEY` - Supabase API key
 - `SUPABASE_BUCKET_NAME` - Supabase storage bucket name
 
-## Login
+## Demo Login
 
-Default admin account:
-- Username: `Louka`
-- Password: `Ceta2007`
+Demo account available in the app. Check the application for login credentials.
+
+⚠️ **Note**: Keep credentials secure and change password regularly.
 
 ## Scripts
 
 - `node server.js` - Start the server
 - `node load-users.js` - Load users from users.json to MongoDB
 - `node fix-roles.js` - Update user roles in MongoDB
+
+## License
+
+MIT
