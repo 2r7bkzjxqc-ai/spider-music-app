@@ -903,14 +903,17 @@ app.get('/api/audio/:id', async (req, res) => {
   }
 });
 
-// SERVE AUDIO FILES - Direct route
+// SERVE AUDIO FILES - from E:\MusiqueSpiderMusic
 app.get('/audio/:filename', (req, res) => {
   try {
-    const filePath = path.join(__dirname, 'uploads', 'audio', req.params.filename);
+    const filename = req.params.filename.replace(/\.\./g, ''); // Security: prevent path traversal
+    const filePath = path.join('E:\\MusiqueSpiderMusic', filename);
+    
     if (fs.existsSync(filePath)) {
+      res.setHeader('Content-Type', 'audio/mpeg');
       res.sendFile(filePath);
     } else {
-      res.status(404).json({ error: 'File not found' });
+      res.status(404).json({ error: 'File not found: ' + filename });
     }
   } catch (err) {
     res.status(500).json({ error: err.message });
