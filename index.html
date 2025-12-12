@@ -476,7 +476,7 @@
                     <h1 class="page-title">⚙️ Paramètres</h1>
                     <p class="page-subtitle">Configurez votre expérience</p>
                     
-                    <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; max-width: 600px;">
+                    <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; max-width: 600px; margin-bottom: 30px;">
                         <h3 style="margin-bottom: 15px;">Informations serveur</h3>
                         <div style="font-size: 13px; color: #888; line-height: 1.8;">
                             <div>🔗 Serveur: <span id="serverUrl">http://localhost:3000</span></div>
@@ -488,6 +488,31 @@
                         <div style="margin-top: 20px;">
                             <button onclick="loadSongs()" style="background: linear-gradient(to right, #ff1744, #f50057); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600;">Recharger les données</button>
                         </div>
+                    </div>
+
+                    <!-- ADMIN UPLOAD SECTION -->
+                    <div id="adminUploadSection" style="display: none; background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; max-width: 600px;">
+                        <h3 style="margin-bottom: 15px;">📤 Upload Audio (Admin)</h3>
+                        <form id="uploadForm" style="display: flex; flex-direction: column; gap: 15px;">
+                            <div>
+                                <label style="display: block; margin-bottom: 5px; font-size: 13px; color: #aaa;">Titre *</label>
+                                <input type="text" id="uploadTitle" placeholder="Nom de la chanson" required style="width: 100%; padding: 10px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: white;">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 5px; font-size: 13px; color: #aaa;">Artiste</label>
+                                <input type="text" id="uploadArtist" placeholder="Nom de l'artiste" style="width: 100%; padding: 10px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: white;">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 5px; font-size: 13px; color: #aaa;">Album</label>
+                                <input type="text" id="uploadAlbum" placeholder="Nom de l'album" style="width: 100%; padding: 10px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: white;">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 5px; font-size: 13px; color: #aaa;">Fichier Audio *</label>
+                                <input type="file" id="uploadFile" accept="audio/*" required style="width: 100%; padding: 10px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: white;">
+                            </div>
+                            <button type="submit" style="background: linear-gradient(to right, #ff1744, #f50057); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600;">📤 Upload vers Cloudinary</button>
+                        </form>
+                        <div id="uploadStatus" style="margin-top: 15px; font-size: 13px; color: #888; display: none;"></div>
                     </div>
                 </div>
             </div>
@@ -669,6 +694,74 @@
         function loadSongs() {
             loadData();
         }
+
+        // Check if user is admin and show upload
+        function checkAdminStatus() {
+            // For now, show admin section (you can add user auth later)
+            const adminSection = document.getElementById('adminUploadSection');
+            if (adminSection) {
+                adminSection.style.display = 'block';
+            }
+        }
+
+        // Handle file upload to Cloudinary
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAdminStatus();
+            
+            const uploadForm = document.getElementById('uploadForm');
+            if (uploadForm) {
+                uploadForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+
+                    const title = document.getElementById('uploadTitle').value.trim();
+                    const artist = document.getElementById('uploadArtist').value.trim() || 'Unknown Artist';
+                    const album = document.getElementById('uploadAlbum').value.trim() || 'Unknown Album';
+                    const file = document.getElementById('uploadFile').files[0];
+                    const statusDiv = document.getElementById('uploadStatus');
+
+                    if (!title || !file) {
+                        statusDiv.style.display = 'block';
+                        statusDiv.innerHTML = '❌ Titre et fichier requis';
+                        return;
+                    }
+
+                    statusDiv.style.display = 'block';
+                    statusDiv.innerHTML = '⏳ Upload en cours...';
+                    uploadForm.querySelector('button').disabled = true;
+
+                    try {
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        formData.append('title', title);
+                        formData.append('artist', artist);
+                        formData.append('album', album);
+
+                        const response = await fetch(SERVER + '/api/upload/audio', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            statusDiv.innerHTML = `✅ ${data.song.title} uploadé avec succès!`;
+                            uploadForm.reset();
+                            
+                            // Reload songs after 2 seconds
+                            setTimeout(() => {
+                                loadData();
+                            }, 2000);
+                        } else {
+                            statusDiv.innerHTML = '❌ ' + (data.error || 'Erreur upload');
+                        }
+                    } catch (error) {
+                        statusDiv.innerHTML = '❌ ' + error.message;
+                    } finally {
+                        uploadForm.querySelector('button').disabled = false;
+                    }
+                });
+            }
+        });
 
         // Update progress bar
         audio.addEventListener('timeupdate', () => {
