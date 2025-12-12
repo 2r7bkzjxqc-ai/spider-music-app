@@ -86,6 +86,8 @@ const songSchema = new mongoose.Schema({
   album: String,
   cover: String,
   src: String,                  // URL audio (local, Cloudinary, ou SoundCloud)
+  audioData: String,            // Base64 encoded audio data
+  audioSize: Number,            // Size in bytes
   platform: { type: String, default: 'local' }, // 'local', 'cloudinary', 'soundcloud'
   externalId: String,          // SoundCloud track ID or Cloudinary ID
   externalUrl: String,         // Link to original source (SoundCloud permalink)
@@ -419,53 +421,41 @@ app.post('/api/upload/audio', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'Title is required' });
     }
 
-    // Upload to Cloudinary with unsigned preset (no API secret needed)
-    const uploadPromise = new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        {
-          resource_type: 'auto',
-          folder: 'spider-music',
-          public_id: `${Date.now()}_${title.replace(/\s+/g, '_').substring(0, 30)}`,
-          quality: 'auto',
-          secure: true
-        },
-        (error, result) => {
-          if (error) {
-            console.error('Cloudinary error:', error);
-            reject(error);
-          } else {
-            resolve(result);
-          }
-        }
-      );
-      stream.on('error', (error) => {
-        console.error('Stream error:', error);
-        reject(error);
-      });
-      stream.end(req.file.buffer);
-    });
-
-    const cloudinaryResult = await uploadPromise;
+    // Convert file buffer to base64
+    const audioBase64 = req.file.buffer.toString('base64');
+    const audioSize = req.file.buffer.length;
     
-    // Create song entry
+    // Create song entry with audio data in MongoDB
     const song = new Song({
       title,
       artist: artist || 'Unknown Artist',
       album: album || 'Unknown Album',
       cover: 'https://via.placeholder.com/300/121212/FFFFFF?text=Uploaded',
-      src: cloudinaryResult.secure_url,
-      platform: 'cloudinary',
-      externalId: cloudinaryResult.public_id,
-      duration: Math.floor(cloudinaryResult.duration || 0),
+      src: `/api/audio/${Date.now()}`, // Local reference
+      audioData: audioBase64,
+      audioSize,
+      platform: 'mongodb',
+      duration: 0,
       genre: 'Music'
     });
 
     await song.save();
     
     res.json({ 
-      message: 'Audio uploaded successfully',
-      song,
-      cloudinary: {
+      message: 'Audio uploaded successfully to MongoDB',
+      song: {
+        id: song._id,
+        title: song.title,
+        artist: song.artist,
+        audioSize: audioSize,
+        platform: 'mongodb'
+      }
+    });
+  } catch (err) {
+    console.error('Upload error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
         public_id: cloudinaryResult.public_id,
         url: cloudinaryResult.secure_url,
         duration: cloudinaryResult.duration
@@ -907,6 +897,24 @@ async function likeSongHandler(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
+
+// SERVE AUDIO FROM MongoDB
+app.get('/api/audio/:id', async (req, res) => {
+  try {
+    const song = await Song.findById(req.params.id);
+    if (!song || !song.audioData) {
+      return res.status(404).json({ error: 'Audio not found' });
+    }
+    
+    // Convert base64 back to buffer
+    const audioBuffer = Buffer.from(song.audioData, 'base64');
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Content-Length', audioBuffer.length);
+    res.send(audioBuffer);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // SERVE AUDIO FILES - Direct route
 app.get('/audio/:filename', (req, res) => {
