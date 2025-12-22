@@ -88,9 +88,13 @@ app.use((req, res, next) => {
 const userSchema = new mongoose.Schema({
   username: { type: String, unique: true, required: true },
   password: String,
+  role: { type: String, default: 'user' },
   avatar: String,
+  banner: String,
+  isOnline: { type: Boolean, default: false },
   followers: [String],
   following: [String],
+  likedAlbums: [String],
   createdAt: { type: Date, default: Date.now }
 });
 

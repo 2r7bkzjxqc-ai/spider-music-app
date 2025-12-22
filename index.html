@@ -1918,8 +1918,46 @@
         // --- HELPER & CONSTANTS ---
         function safeEncode(str) { if (!str) return ""; return encodeURIComponent(str).replace(/'/g, "%27"); }
         const ACTIVE_SERVER = window.location.origin;
+        function svgToDataUri(svg) {
+            return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+        }
+        const DEFAULT_AVATAR = svgToDataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#111827"/><stop offset="1" stop-color="#374151"/></linearGradient></defs><rect width="150" height="150" rx="75" fill="url(#g)"/><circle cx="75" cy="60" r="22" fill="#9CA3AF" opacity="0.45"/><rect x="40" y="92" width="70" height="40" rx="20" fill="#9CA3AF" opacity="0.35"/></svg>`);
         // --- 1. DEFAULT COVER CONSTANT ---
-        const DEFAULT_COVER = "https://via.placeholder.com/300/121212/FFFFFF?text=No+Cover";
+        const DEFAULT_COVER = svgToDataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0b0f19"/><stop offset="1" stop-color="#1f2937"/></linearGradient></defs><rect width="300" height="300" rx="24" fill="url(#g)"/><path d="M120 210c0 16 13 30 30 30s30-13 30-30v-70l60-18v-26l-90 26v88c-5-3-11-5-18-5-17 0-32 12-32 30z" fill="#9CA3AF" opacity="0.55"/></svg>`);
+
+        // Optional: set these in console for PC storage mode
+        // localStorage.setItem('pcStorageBaseUrl', 'https://<your-tunnel-domain>')
+        // localStorage.setItem('pcStorageToken', '<token>')
+        function getPcStorageBaseUrl() {
+            return (localStorage.getItem('pcStorageBaseUrl') || '').trim().replace(/\/$/, '');
+        }
+        function getPcStorageToken() {
+            return (localStorage.getItem('pcStorageToken') || '').trim();
+        }
+        async function uploadToPcStorage(file, kind) {
+            const baseUrl = getPcStorageBaseUrl();
+            if (!baseUrl) throw new Error('PC storage base URL not set');
+
+            const form = new FormData();
+            form.append('file', file);
+
+            const headers = {};
+            const token = getPcStorageToken();
+            if (token) headers['x-storage-token'] = token;
+
+            const res = await fetch(`${baseUrl}/upload/${kind}`, {
+                method: 'POST',
+                headers,
+                body: form
+            });
+            if (!res.ok) {
+                const text = await res.text().catch(() => '');
+                throw new Error(`PC upload failed (${res.status}): ${text}`);
+            }
+            const data = await res.json();
+            if (!data || !data.url) throw new Error('PC upload missing url');
+            return data.url;
+        }
         
         // --- CUSTOM MODALS (CONFIRM, ALERT, PROMPT) ---
         function customConfirm(message) {
@@ -4199,7 +4237,32 @@
             if (activeThemeBtn) activeThemeBtn.classList.add('active');
             
             const savedUser = localStorage.getItem('musicAppUser');
-            if(savedUser) { currentUser = JSON.parse(savedUser); updateUserUI(); setServerStatus('online'); smartConnect(); }
+            if(savedUser) {
+                currentUser = JSON.parse(savedUser);
+                updateUserUI();
+                setServerStatus('online');
+                smartConnect();
+                // Always refresh from server so role/avatar/banner stay in sync
+                (async () => {
+                    try {
+                        const r = await fetch(`${ACTIVE_SERVER}/users/profile/${encodeURIComponent(currentUser.username)}`, { cache: 'no-store' });
+                        if (!r.ok) return;
+                        const u = await r.json();
+                        if (!u) return;
+
+                        if (u.role) currentUser.role = u.role;
+                        if (u.avatar) currentUser.avatar = u.avatar;
+                        if (u.banner) currentUser.banner = u.banner;
+                        if (Array.isArray(u.following)) currentUser.following = u.following;
+                        if (Array.isArray(u.likedAlbums)) currentUser.likedAlbums = u.likedAlbums;
+
+                        localStorage.setItem('musicAppUser', JSON.stringify(currentUser));
+                        updateUserUI();
+                    } catch (e) {
+                        // Ignore refresh errors; app can still work with cached localStorage.
+                    }
+                })();
+            }
             else document.getElementById('authModal').classList.remove('hidden');
         });
 
@@ -4252,7 +4315,7 @@
             console.log('👤 Role:', currentUser.role);
             document.getElementById('userInfo').innerText = currentUser.username;
             document.getElementById('userRole').innerText = currentUser.role || 'User';
-            document.getElementById('userAvatar').src = currentUser.avatar || "https://via.placeholder.com/150";
+            document.getElementById('userAvatar').src = currentUser.avatar || DEFAULT_AVATAR;
             
             // Show admin panel if user is admin or superadmin
             const isAdmin = currentUser.role === 'admin' || currentUser.role === 'superadmin';
@@ -4620,46 +4683,53 @@
         }
 
         async function updateProfile() {
-            let avatarUrl = document.getElementById('avatarUrlInput').value;
-            let bannerUrl = document.getElementById('bannerUrlInput').value;
-            
-            // If we have base64 data (from file upload), upload to server
-            const avatarBase64 = document.getElementById('avatarData').value;
-            const bannerBase64 = document.getElementById('bannerData').value;
-            
-            if (!avatarUrl && !bannerUrl) {
-                document.getElementById('profileModal').classList.add('hidden');
-                return;
-            }
-            
-            const payload = { username: currentUser.username };
-            
-            // Send avatar/banner URLs to server to update MongoDB
-            if (avatarUrl) payload.avatar = avatarUrl;
-            if (bannerUrl) payload.banner = bannerUrl;
-            // If base64 provided, use that instead
-            if (avatarBase64) payload.avatar = avatarBase64;
-            if (bannerBase64) payload.banner = bannerBase64;
-            
+            let avatarUrl = (document.getElementById('avatarUrlInput').value || '').trim();
+            let bannerUrl = (document.getElementById('bannerUrlInput').value || '').trim();
+
+            const avatarFile = document.getElementById('avatarInput').files[0];
+            const bannerFile = document.getElementById('bannerInput').files[0];
+
+            const avatarBase64 = (document.getElementById('avatarData').value || '').trim();
+            const bannerBase64 = (document.getElementById('bannerData').value || '').trim();
+
             try {
+                // If PC storage is configured, upload files there and store URLs in MongoDB
+                const pcBase = getPcStorageBaseUrl();
+                if (pcBase) {
+                    if (avatarFile) avatarUrl = await uploadToPcStorage(avatarFile, 'image');
+                    if (bannerFile) bannerUrl = await uploadToPcStorage(bannerFile, 'image');
+                } else {
+                    // Fallback: keep previous behavior (base64 stored directly)
+                    if (!avatarUrl && avatarBase64) avatarUrl = avatarBase64;
+                    if (!bannerUrl && bannerBase64) bannerUrl = bannerBase64;
+                }
+
+                if (!avatarUrl && !bannerUrl) {
+                    document.getElementById('profileModal').classList.add('hidden');
+                    return;
+                }
+
+                const payload = { username: currentUser.username };
+                if (avatarUrl) payload.avatar = avatarUrl;
+                if (bannerUrl) payload.banner = bannerUrl;
+
                 const res = await fetch(`${ACTIVE_SERVER}/users/profile`, {
                     method: 'PUT',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(payload)
                 });
-                
+
                 if (res.ok) {
                     const updatedUser = await res.json();
-                    // Update currentUser with response from server
                     if (updatedUser.avatar) currentUser.avatar = updatedUser.avatar;
                     if (updatedUser.banner) currentUser.banner = updatedUser.banner;
-                    
-                    // Save to localStorage
+
                     localStorage.setItem('musicAppUser', JSON.stringify(currentUser));
                     updateUserUI();
                     showToast('Profil mis à jour !');
                 } else {
-                    console.error('Failed to update profile:', res.status);
+                    const text = await res.text().catch(() => '');
+                    console.error('Failed to update profile:', res.status, text);
                     showToast('Erreur lors de la mise à jour');
                 }
             } catch (e) {

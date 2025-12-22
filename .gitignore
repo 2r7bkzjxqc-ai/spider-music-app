@@ -4,6 +4,7 @@ node_modules/
 .env
 *.bak
 uploads/
+pc_uploads/
 users.json
 posts.json
 notifications.json
