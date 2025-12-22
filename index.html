@@ -1917,6 +1917,39 @@
         function normalizeBaseUrl(u) {
             return (u || '').trim().replace(/\/$/, '');
         }
+        // Config without DevTools:
+        // https://<railway-domain>/?apiBaseUrl=https://<your-tunnel>&pcStorageBaseUrl=https://<your-tunnel>&pcStorageToken=<token>
+        (function applyUrlConfigToLocalStorage() {
+            try {
+                const params = new URLSearchParams(window.location.search || '');
+                const apiBaseUrl = params.get('apiBaseUrl') || params.get('api') || params.get('server');
+                const pcStorageBaseUrl = params.get('pcStorageBaseUrl') || params.get('storageBaseUrl') || params.get('storage');
+                const pcStorageToken = params.get('pcStorageToken') || params.get('storageToken') || params.get('token');
+
+                let changed = false;
+                if (apiBaseUrl) {
+                    localStorage.setItem('apiBaseUrl', apiBaseUrl);
+                    changed = true;
+                }
+                if (pcStorageBaseUrl) {
+                    localStorage.setItem('pcStorageBaseUrl', pcStorageBaseUrl);
+                    changed = true;
+                }
+                if (pcStorageToken) {
+                    localStorage.setItem('pcStorageToken', pcStorageToken);
+                    changed = true;
+                }
+
+                if (changed) {
+                    ['apiBaseUrl', 'api', 'server', 'pcStorageBaseUrl', 'storageBaseUrl', 'storage', 'pcStorageToken', 'storageToken', 'token'].forEach(k => params.delete(k));
+                    const qs = params.toString();
+                    const clean = `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash || ''}`;
+                    window.history.replaceState({}, '', clean);
+                }
+            } catch (e) {
+                // ignore
+            }
+        })();
         // When Railway only serves index.html, set this in the browser:
         // localStorage.setItem('apiBaseUrl','https://<your-tunnel-domain>')
         const ACTIVE_SERVER = normalizeBaseUrl(localStorage.getItem('apiBaseUrl')) || window.location.origin;
