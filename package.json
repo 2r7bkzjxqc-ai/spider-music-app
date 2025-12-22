@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js",
+    "start": "node railway-static-server.js",
+    "start:full": "node server.js",
+    "pc-app": "node pc-app-server.js",
     "pc-storage": "node pc-storage-server.js",
     "migrate": "node migrate.js",
     "postinstall": "node -e \"console.log('Dependencies installed successfully')\""

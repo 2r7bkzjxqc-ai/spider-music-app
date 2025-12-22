@@ -5,6 +5,7 @@ node_modules/
 *.bak
 uploads/
 pc_uploads/
+pc_data/
 users.json
 posts.json
 notifications.json

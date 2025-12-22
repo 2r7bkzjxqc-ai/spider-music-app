@@ -1917,7 +1917,12 @@
     <script>
         // --- HELPER & CONSTANTS ---
         function safeEncode(str) { if (!str) return ""; return encodeURIComponent(str).replace(/'/g, "%27"); }
-        const ACTIVE_SERVER = window.location.origin;
+        function normalizeBaseUrl(u) {
+            return (u || '').trim().replace(/\/$/, '');
+        }
+        // When Railway only serves index.html, set this in the browser:
+        // localStorage.setItem('apiBaseUrl','https://<your-tunnel-domain>')
+        const ACTIVE_SERVER = normalizeBaseUrl(localStorage.getItem('apiBaseUrl')) || window.location.origin;
         function svgToDataUri(svg) {
             return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
         }
