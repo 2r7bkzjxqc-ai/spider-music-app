@@ -11,7 +11,6 @@ const fs = require('fs');
 const cors = require('cors');
 const crypto = require('crypto');
 const cloudinary = require('cloudinary').v2;
-const { createClient } = require('@supabase/supabase-js');
 
 // Configure Cloudinary
 cloudinary.config({
@@ -20,11 +19,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SECRET_KEY
-);
+// NOTE: Supabase removed. This server no longer depends on SUPABASE_* env vars.
 
 const PORT = parseInt(process.env.PORT, 10) || 3000;
 const app = express();
@@ -495,7 +490,7 @@ app.get('/api/soundcloud/search', async (req, res) => {
   }
 });
 
-// UPLOAD AUDIO FILE TO SUPABASE STORAGE
+// UPLOAD AUDIO FILE (LOCAL STORAGE)
 app.post('/api/upload/audio', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
@@ -510,38 +505,24 @@ app.post('/api/upload/audio', upload.single('file'), async (req, res) => {
     // Generate unique filename
     const timestamp = Date.now();
     const randomStr = Math.random().toString(36).substring(2, 8);
-    const fileName = `${timestamp}_${randomStr}_${req.file.originalname}`;
+    const safeOriginal = (req.file.originalname || 'audio').replace(/[^a-zA-Z0-9._-]/g, '_');
+    const fileName = `${timestamp}_${randomStr}_${safeOriginal}`;
 
-    // Upload to Supabase Storage
-    const { data, error } = await supabase
-      .storage
-      .from(process.env.SUPABASE_BUCKET_NAME)
-      .upload(fileName, req.file.buffer, {
-        contentType: req.file.mimetype,
-        upsert: false
-      });
+    const audioDir = path.join(__dirname, 'uploads', 'audio');
+    fs.mkdirSync(audioDir, { recursive: true });
+    const filePath = path.join(audioDir, fileName);
+    fs.writeFileSync(filePath, req.file.buffer);
 
-    if (error) {
-      console.error('Supabase upload error:', error);
-      return res.status(500).json({ error: 'Failed to upload file to storage' });
-    }
+    const publicUrl = `${req.protocol}://${req.get('host')}/uploads/audio/${encodeURIComponent(fileName)}`;
 
-    // Get public URL from Supabase
-    const { data: publicData } = supabase
-      .storage
-      .from(process.env.SUPABASE_BUCKET_NAME)
-      .getPublicUrl(fileName);
-
-    const publicUrl = publicData.publicUrl;
-
-    // Create song entry with Supabase URL in MongoDB
+    // Create song entry with local URL in MongoDB
     const song = new Song({
       title,
       artist: artist || 'Unknown Artist',
       album: album || 'Unknown Album',
       cover: 'https://via.placeholder.com/300/121212/FFFFFF?text=Uploaded',
-      src: publicUrl, // Supabase URL
-      platform: 'supabase',
+      src: publicUrl,
+      platform: 'local',
       duration: 0,
       genre: 'Music'
     });
@@ -549,13 +530,13 @@ app.post('/api/upload/audio', upload.single('file'), async (req, res) => {
     await song.save();
     
     res.json({ 
-      message: 'Audio uploaded successfully to Supabase',
+      message: 'Audio uploaded successfully (local)',
       song: {
         id: song._id,
         title: song.title,
         artist: song.artist,
         src: publicUrl,
-        platform: 'supabase'
+        platform: 'local'
       }
     });
   } catch (err) {
