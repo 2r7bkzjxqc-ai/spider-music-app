@@ -11,6 +11,9 @@ const crypto = require('crypto');
 
 const app = express();
 
+// Needed behind Cloudflare Tunnel / reverse proxies so req.protocol uses X-Forwarded-Proto.
+app.set('trust proxy', true);
+
 const PORT = parseInt(process.env.PC_STORAGE_PORT || process.env.PORT, 10) || 5050;
 const ROOT_DIR = process.env.PC_STORAGE_ROOT
   ? path.resolve(process.env.PC_STORAGE_ROOT)

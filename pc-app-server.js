@@ -11,6 +11,9 @@ const crypto = require('crypto');
 
 const app = express();
 
+// Needed behind Cloudflare Tunnel / reverse proxies so req.protocol uses X-Forwarded-Proto.
+app.set('trust proxy', true);
+
 const PORT = parseInt(process.env.PC_APP_PORT || process.env.PORT, 10) || 5050;
 
 // Data + storage live on your PC
