@@ -3,6 +3,7 @@ node_modules/
 .DS_Store
 .env
 *.bak
+tailwind.css
 uploads/
 pc_uploads/
 pc_data/

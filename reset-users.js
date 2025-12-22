@@ -53,7 +53,7 @@ async function cleanAndFixUsers() {
           username,
           password: username === 'Louka' ? 'Ceta2007' : 'password',
           role,
-          avatar: 'https://via.placeholder.com/150',
+          avatar: '',
           isOnline: false,
           following: [],
           followers: [],

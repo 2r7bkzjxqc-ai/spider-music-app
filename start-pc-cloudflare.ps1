@@ -1,5 +1,6 @@
 param(
-  [int]$Port = 5050
+  [int]$Port = 3000,
+  [string]$StorageRoot = "D:\stockagespidermusic"
 )
 
 $ErrorActionPreference = 'Stop'
@@ -15,6 +16,8 @@ if (-not $env:PC_STORAGE_TOKEN) {
 
 # Ensure PC app uses the requested port
 $env:PC_APP_PORT = "$Port"
+$env:PC_STORAGE_ROOT = "$StorageRoot"
+$env:PC_DATA_DIR = (Join-Path $StorageRoot 'data')
 
 Write-Host "[1/2] Starting PC app server on http://localhost:$Port" -ForegroundColor Cyan
 Start-Process -FilePath "powershell.exe" -ArgumentList "-NoExit","-Command","cd `"$repo`" ; npm run pc-app" | Out-Null

@@ -5,9 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spider Music</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='grad' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%23ff1744;stop-opacity:1' /><stop offset='100%' style='stop-color:%23f50057;stop-opacity:1' /></linearGradient></defs><rect fill='%23000' width='100' height='100'/><circle cx='50' cy='35' r='10' fill='url(%23grad)'/><circle cx='35' cy='55' r='8' fill='url(%23grad)'/><circle cx='65' cy='55' r='8' fill='url(%23grad)'/><path d='M 50 45 L 35 63 M 50 45 L 65 63' stroke='url(%23grad)' stroke-width='2' stroke-linecap='round'/><path d='M 30 45 L 25 40 M 25 40 Q 20 35 22 28' stroke='url(%23grad)' stroke-width='2' stroke-linecap='round' fill='none'/><path d='M 70 45 L 75 40 M 75 40 Q 80 35 78 28' stroke='url(%23grad)' stroke-width='2' stroke-linecap='round' fill='none'/><path d='M 35 65 L 30 75 M 65 65 L 70 75' stroke='url(%23grad)' stroke-width='2' stroke-linecap='round'/><text x='50' y='92' font-family='Arial, sans-serif' font-size='10' font-weight='bold' fill='%23ff1744' text-anchor='middle'>SPIDER</text></svg>">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/tailwind.css">
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://w.soundcloud.com/player/api.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -357,7 +356,7 @@
         .notif-dot.active { display: block; }
 
         #toastContainer { position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%); z-index: 10001; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
-        .toast { background: #222; border: 1px solid rgba(255,255,255,0.2); color: white; padding: 12px 24px; border-radius: 9999px; font-medium text-sm opacity-0 transition: all 0.3s; transform: translateY(20px); display: flex; align-items: center; gap: 10px; pointer-events: auto; }
+        .toast { background: #222; border: 1px solid rgba(255,255,255,0.2); color: white; padding: 12px 24px; border-radius: 9999px; font-weight: 500; font-size: 0.875rem; line-height: 1.25rem; opacity: 0; transition: all 0.3s; transform: translateY(20px); display: flex; align-items: center; gap: 10px; pointer-events: auto; }
         .toast.show { opacity: 1; transform: translateY(0); }
         
         input[type=range] { -webkit-appearance: none; background: transparent; height: 100%; width: 100%; cursor: pointer; z-index: 20; }
@@ -365,8 +364,9 @@
         .group:hover input[type=range]::-webkit-slider-thumb, .group\/vol:hover input[type=range]::-webkit-slider-thumb { opacity: 1; transform: scale(1.2); }
         input[type=range]::-webkit-slider-runnable-track { background: transparent; height: 100%; }
         
-        .modal-tab { @apply pb-2 text-gray-400 cursor-pointer border-b-2 border-transparent hover:text-white transition-colors; }
-        .modal-tab.active { @apply text-red-500 border-red-500 font-bold; }
+        .modal-tab { padding-bottom: 0.5rem; color: #9ca3af; cursor: pointer; border-bottom: 2px solid transparent; transition: color 150ms; }
+        .modal-tab:hover { color: #ffffff; }
+        .modal-tab.active { color: #ef4444; border-bottom-color: #ef4444; font-weight: 700; }
 
         /* Language Button Active State */
         .lang-btn[data-lang].active {
@@ -441,8 +441,8 @@
             color: #666666 !important;
         }
 
-        body[data-theme="light"] .bg-[#181818],
-        body[data-theme="light"] .bg-[#282828] {
+        body[data-theme="light"] .bg-\[\#181818\],
+        body[data-theme="light"] .bg-\[\#282828\] {
             background-color: #ffffff !important;
             border: 1px solid rgba(0, 0, 0, 0.1);
         }
@@ -475,14 +475,14 @@
             color: #f9a8d4 !important;
         }
 
-        body[data-theme="pink"] .bg-[#181818],
-        body[data-theme="pink"] .bg-[#282828] {
+        body[data-theme="pink"] .bg-\[\#181818\],
+        body[data-theme="pink"] .bg-\[\#282828\] {
             background: rgba(59, 35, 56, 0.6) !important;
             border: 1px solid rgba(236, 72, 153, 0.2);
         }
 
-        body[data-theme="pink"] .bg-[#181818]:hover,
-        body[data-theme="pink"] .bg-[#282828]:hover {
+        body[data-theme="pink"] .bg-\[\#181818\]:hover,
+        body[data-theme="pink"] .bg-\[\#282828\]:hover {
             background: rgba(75, 45, 70, 0.7) !important;
             border-color: rgba(236, 72, 153, 0.4);
         }
@@ -584,14 +584,14 @@
             color: #64748b !important;
         }
 
-        body[data-theme="light"] .bg-[#181818],
-        body[data-theme="light"] .bg-[#282828] {
+        body[data-theme="light"] .bg-\[\#181818\],
+        body[data-theme="light"] .bg-\[\#282828\] {
             background: rgba(248, 250, 252, 0.9) !important;
             border: 1px solid rgba(100, 116, 139, 0.15);
         }
 
-        body[data-theme="light"] .bg-[#181818]:hover,
-        body[data-theme="light"] .bg-[#282828]:hover {
+        body[data-theme="light"] .bg-\[\#181818\]:hover,
+        body[data-theme="light"] .bg-\[\#282828\]:hover {
             background: rgba(241, 245, 249, 1) !important;
             border-color: rgba(100, 116, 139, 0.25);
         }
@@ -694,7 +694,7 @@
             color: #be185d !important;
         }
 
-        body[data-theme="lightpink"] .bg-[#181818] {
+        body[data-theme="lightpink"] .bg-\[\#181818\] {
             background: linear-gradient(135deg, rgba(255, 237, 246, 0.9), rgba(254, 226, 243, 0.85)) !important;
             border: 1px solid rgba(244, 114, 182, 0.3);
         }
@@ -802,8 +802,6 @@
 
         body[data-theme="lightpink"] .hover\:text-red-500:hover {
             color: #db2777 !important;
-        }
-            border: 1px solid rgba(100, 116, 139, 0.12);
         }
 
         body[data-theme="light"] .shadow-lg,
@@ -1911,7 +1909,6 @@
         </div>
     </div>
     
-    <iframe id="scPlayer" class="absolute top-0 left-0 w-1 h-1 opacity-0 pointer-events-none" src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/293&auto_play=false" allow="autoplay"></iframe>
     <audio id="audioPlayer"></audio>
 
     <script>
@@ -1929,6 +1926,112 @@
         const DEFAULT_AVATAR = svgToDataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#111827"/><stop offset="1" stop-color="#374151"/></linearGradient></defs><rect width="150" height="150" rx="75" fill="url(#g)"/><circle cx="75" cy="60" r="22" fill="#9CA3AF" opacity="0.45"/><rect x="40" y="92" width="70" height="40" rx="20" fill="#9CA3AF" opacity="0.35"/></svg>`);
         // --- 1. DEFAULT COVER CONSTANT ---
         const DEFAULT_COVER = svgToDataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0b0f19"/><stop offset="1" stop-color="#1f2937"/></linearGradient></defs><rect width="300" height="300" rx="24" fill="url(#g)"/><path d="M120 210c0 16 13 30 30 30s30-13 30-30v-70l60-18v-26l-90 26v88c-5-3-11-5-18-5-17 0-32 12-32 30z" fill="#9CA3AF" opacity="0.55"/></svg>`);
+
+        function normalizeImageUrl(url, fallback) {
+            if (!url || typeof url !== 'string') return fallback;
+            // Avoid external placeholder dependencies that can fail DNS / be blocked.
+            if (url.includes('via.placeholder.com')) return fallback;
+            return url;
+        }
+
+        // --- SoundCloud lazy loader (avoids adblock spam/errors until actually needed) ---
+        let scWidget = null;
+        let scUpdateInterval = null;
+        let soundCloudLoadPromise = null;
+        let soundCloudDisabled = false;
+
+        function loadExternalScriptOnce(src) {
+            return new Promise((resolve, reject) => {
+                const existing = document.querySelector(`script[src="${src}"]`);
+                if (existing) return resolve();
+                const s = document.createElement('script');
+                s.src = src;
+                s.async = true;
+                s.onload = () => resolve();
+                s.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+                document.head.appendChild(s);
+            });
+        }
+
+        function ensureSoundCloudIframe() {
+            let iframe = document.getElementById('scPlayer');
+            if (iframe) return iframe;
+            iframe = document.createElement('iframe');
+            iframe.id = 'scPlayer';
+            iframe.className = 'absolute top-0 left-0 w-1 h-1 opacity-0 pointer-events-none';
+            iframe.src = 'https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/293&auto_play=false';
+            iframe.setAttribute('allow', 'autoplay');
+            document.body.appendChild(iframe);
+            return iframe;
+        }
+
+        function disableSoundCloud(reason) {
+            soundCloudDisabled = true;
+            scWidget = null;
+            if (scUpdateInterval) clearInterval(scUpdateInterval);
+            scUpdateInterval = null;
+            // eslint-disable-next-line no-console
+            console.warn('SoundCloud disabled:', reason);
+        }
+
+        async function probeSoundCloudReachable() {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 1500);
+            try {
+                // no-cors means we can't read response, but adblock/network failures still reject.
+                await fetch('https://api-widget.soundcloud.com/', { mode: 'no-cors', signal: controller.signal });
+                return true;
+            } catch (e) {
+                return false;
+            } finally {
+                clearTimeout(timeout);
+            }
+        }
+
+        function ensureSoundCloudWidget() {
+            if (soundCloudDisabled) return Promise.resolve(null);
+            if (scWidget) return Promise.resolve(scWidget);
+            if (soundCloudLoadPromise) return soundCloudLoadPromise;
+
+            soundCloudLoadPromise = (async () => {
+                try {
+                    const ok = await probeSoundCloudReachable();
+                    if (!ok) throw new Error('SoundCloud blocked or unreachable');
+                    await loadExternalScriptOnce('https://w.soundcloud.com/player/api.js');
+                    if (!window.SC || !SC.Widget) throw new Error('SC.Widget not available');
+                    const iframe = ensureSoundCloudIframe();
+                    scWidget = SC.Widget(iframe);
+
+                    scWidget.bind(SC.Widget.Events.FINISH, onTrackEnd);
+                    scWidget.bind(SC.Widget.Events.PAUSE, () => { isPlaying = false; updatePlayBtn(); if (scUpdateInterval) clearInterval(scUpdateInterval); });
+                    scWidget.bind(SC.Widget.Events.PLAY, () => {
+                        isPlaying = true;
+                        updatePlayBtn();
+                        if (scUpdateInterval) clearInterval(scUpdateInterval);
+                        scUpdateInterval = setInterval(updateSCProgress, 100);
+                    });
+                    scWidget.bind(SC.Widget.Events.PLAY_PROGRESS, (data) => {
+                        const current = (data?.currentPosition || 0) / 1000;
+                        const duration = (data?.duration || 0) / 1000;
+                        if (duration > 0) audioDuration = duration;
+                        if (audioDuration > 0) {
+                            const pct = (current / audioDuration) * 100;
+                            document.getElementById('progressInput').value = pct || 0;
+                            document.getElementById('progressBar').style.width = `${pct || 0}%`;
+                            document.getElementById('currentTime').innerText = formatTime(current);
+                            document.getElementById('duration').innerText = formatTimeRemaining(current, audioDuration);
+                        }
+                    });
+
+                    return scWidget;
+                } catch (e) {
+                    disableSoundCloud(e?.message || e);
+                    return null;
+                }
+            })();
+
+            return soundCloudLoadPromise;
+        }
 
         // Optional: set these in console for PC storage mode
         // localStorage.setItem('pcStorageBaseUrl', 'https://<your-tunnel-domain>')
@@ -2073,10 +2176,8 @@
         let currentSongId = null, isPlaying = false, isShuffle = false, repeatMode = 0; 
         let currentAlbumName = null; // Store current album name for like button 
         let viewingProfileType = 'user'; let viewingProfileId = null;
-        let scWidget = null;
         let audioDuration = 0;
         let songToAddId = null;
-        let scUpdateInterval = null;
         let currentLang = localStorage.getItem('appLang') || 'fr';
         let currentTheme = localStorage.getItem('appTheme') || 'dark';
 
@@ -2094,8 +2195,12 @@
                 if(s) {
                     if(s.src.includes('soundcloud')) {
                         // For SoundCloud, reset to beginning and play
-                        scWidget.seekTo(0);
-                        scWidget.play();
+                        ensureSoundCloudWidget().then(w => {
+                            if (w) {
+                                w.seekTo(0);
+                                w.play();
+                            }
+                        });
                     } else { 
                         // For native audio, restart and play
                         audio.currentTime = 0; 
@@ -2120,38 +2225,9 @@
             }
         }
 
-        // --- SC PLAYER ---
-        window.onload = function() {
-            scWidget = SC.Widget(document.getElementById('scPlayer'));
-            scWidget.bind(SC.Widget.Events.FINISH, onTrackEnd);
-            scWidget.bind(SC.Widget.Events.PAUSE, () => { isPlaying = false; updatePlayBtn(); clearInterval(scUpdateInterval); });
-            scWidget.bind(SC.Widget.Events.PLAY, () => { 
-                isPlaying = true; 
-                updatePlayBtn();
-                // Start regular updates when playing
-                if(scUpdateInterval) clearInterval(scUpdateInterval);
-                scUpdateInterval = setInterval(updateSCProgress, 100);
-            });
-            scWidget.bind(SC.Widget.Events.PLAY_PROGRESS, (data) => {
-                // This event fires regularly during playback
-                const current = data.currentPosition / 1000;
-                const duration = data.duration / 1000 || 0;
-                
-                // Update duration if available (critical for timecode)
-                if(duration > 0) {
-                    audioDuration = duration;
-                }
-                
-                // Only update UI if we have valid duration
-                if(audioDuration > 0) {
-                    const pct = (current / audioDuration) * 100; 
-                    document.getElementById('progressInput').value = pct || 0; 
-                    document.getElementById('progressBar').style.width = `${pct || 0}%`; 
-                    document.getElementById('currentTime').innerText = formatTime(current); 
-                    document.getElementById('duration').innerText = formatTimeRemaining(current, audioDuration); 
-                }
-            });
-        };
+        window.addEventListener('load', () => {
+            // SoundCloud is lazy-loaded when needed.
+        });
 
         function updateSCProgress() {
             if(!scWidget || !isPlaying) return;
@@ -2196,7 +2272,10 @@
             const s = songs.find(x => x.id === currentSongId);
             if(!s && filteredSongs.length > 0) playSong(filteredSongs[0].id);
             else if(s) {
-                if(s.src.includes('soundcloud')) scWidget.toggle();
+                if(s.src.includes('soundcloud')) {
+                    if (scWidget && scWidget.toggle) scWidget.toggle();
+                    else ensureSoundCloudWidget().then(w => { if (w && w.toggle) w.toggle(); });
+                }
                 else isPlaying ? audio.pause() : audio.play(); 
             }
         }
@@ -2223,16 +2302,12 @@
 
                 // If this is a SoundCloud track, use the SC widget to get position/duration
                 if (s && typeof s.src === 'string' && s.src.includes('soundcloud')) {
-                    console.debug('[DEBUG] SC updateProgress - currentSongId=', currentSongId, 'src=', s.src, 'scWidget=', !!window.scWidget);
-                    if (window.scWidget && scWidget.getPosition && scWidget.getDuration) {
+                    if (scWidget && scWidget.getPosition && scWidget.getDuration) {
                         scWidget.getPosition(pos => {
-                            console.debug('[DEBUG] SC getPosition -> pos (ms)=', pos);
                             scWidget.getDuration(dur => {
-                                console.debug('[DEBUG] SC getDuration -> dur (ms)=', dur);
                                 const current = (pos || 0) / 1000;
                                 const durationSec = (dur || 0) / 1000;
                                 const pct = durationSec ? (current / durationSec) * 100 : 0;
-                                console.debug('[DEBUG] SC computed -> current=', current, 'duration=', durationSec, 'pct=', pct);
                                 
                                 // Update header player
                                 document.getElementById('progressInput').value = pct || 0;
@@ -2247,7 +2322,7 @@
                             });
                         });
                     } else {
-                        console.warn('[WARN] scWidget not ready or missing getPosition/getDuration');
+                        // Widget not ready yet; avoid spamming console.
                     }
                     return;
                 }
@@ -2275,7 +2350,7 @@
             const s = songs.find(x => x.id === currentSongId);
             if(s && s.src.includes('soundcloud')) {
                 // Seek SC
-                if(audioDuration) scWidget.seekTo((v/100) * audioDuration * 1000);
+                if(audioDuration && scWidget && scWidget.seekTo) scWidget.seekTo((v/100) * audioDuration * 1000);
             } else {
                 if(audio.duration) audio.currentTime = (v/100) * audio.duration; 
             }
@@ -2381,7 +2456,7 @@
             if (!s) return;
             
             // Update cover and background
-            const cover = s.cover || 'https://via.placeholder.com/500';
+            const cover = normalizeImageUrl(s.cover, DEFAULT_COVER);
             document.getElementById('fsCover').src = cover;
             document.getElementById('fsBgBlur').style.backgroundImage = `url(${cover})`;
             
@@ -2424,8 +2499,11 @@
             
             const s = songs.find(x => x.id === currentSongId);
             if (s && s.src.includes('soundcloud')) {
-                scWidget.getDuration(duration => {
-                    scWidget.seekTo(duration * percent);
+                ensureSoundCloudWidget().then(w => {
+                    if (!w || !w.getDuration || !w.seekTo) return;
+                    w.getDuration(duration => {
+                        w.seekTo(duration * percent);
+                    });
                 });
             } else if (audio.duration) {
                 audio.currentTime = audio.duration * percent;
@@ -2471,20 +2549,29 @@
                 document.getElementById('progressBar').style.width = '0%';
                 document.getElementById('progressInput').value = 0;
                 audioDuration = 0;
-                
-                scWidget.load(s.src, { auto_play: true, show_artwork: false });
-                isPlaying = true;
-                updatePlayBtn();
+
+                ensureSoundCloudWidget().then(w => {
+                    if (!w || !w.load) {
+                        isPlaying = false;
+                        updatePlayBtn();
+                        return;
+                    }
+                    w.load(s.src, { auto_play: true, show_artwork: false });
+                    isPlaying = true;
+                    updatePlayBtn();
+                });
             } else {
                 audio.src = s.src; 
                 audio.play().catch(()=>{}); 
                 audio.loop = (repeatMode === 2); 
             }
-            isPlaying = true; 
-            updatePlayBtn(); 
+            if (!s.src.includes('soundcloud')) {
+                isPlaying = true;
+                updatePlayBtn();
+            }
             
             if ('mediaSession' in navigator) { 
-                navigator.mediaSession.metadata = new MediaMetadata({ title: s.title, artist: s.artist, album: s.album || 'Single', artwork: [ { src: s.cover || DEFAULT_COVER, sizes: '512x512', type: 'image/jpeg' } ] }); 
+                navigator.mediaSession.metadata = new MediaMetadata({ title: s.title, artist: s.artist, album: s.album || 'Single', artwork: [ { src: normalizeImageUrl(s.cover, DEFAULT_COVER), sizes: '512x512', type: 'image/jpeg' } ] }); 
                 navigator.mediaSession.setActionHandler('play', () => togglePlay()); 
                 navigator.mediaSession.setActionHandler('pause', () => togglePlay()); 
                 navigator.mediaSession.setActionHandler('previoustrack', () => prevSong()); 
@@ -3915,7 +4002,7 @@
                 const serverData = serverArtists.find(a => a.name === name) || {};
                 return {
                     name: name,
-                    avatar: serverData.avatar || 'https://via.placeholder.com/150',
+                    avatar: normalizeImageUrl(serverData.avatar, DEFAULT_AVATAR),
                     banner: serverData.banner || 'https://images.unsplash.com/photo-1514525253440-b393332569ec?w=1200&q=80',
                     followersCount: serverData.followersCount || 0 // Keeping data but hiding from UI
                 };
@@ -3931,7 +4018,7 @@
                     <div class="bg-gradient-to-br from-white/10 to-white/[0.02] backdrop-blur-xl rounded-3xl p-6 border border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/10">
                         <div class="relative mb-4">
                             <div class="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-500 blur-xl opacity-0 group-hover:opacity-30 transition-opacity rounded-full"></div>
-                            <img src="${art.avatar || 'https://via.placeholder.com/150'}" class="relative w-full aspect-square rounded-full object-cover ring-4 ring-white/10 group-hover:ring-purple-500/50 transition-all transform group-hover:scale-105">
+                            <img src="${normalizeImageUrl(art.avatar, DEFAULT_AVATAR)}" class="relative w-full aspect-square rounded-full object-cover ring-4 ring-white/10 group-hover:ring-purple-500/50 transition-all transform group-hover:scale-105">
                         </div>
                         <h3 class="font-bold text-white text-center truncate text-lg group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-purple-400 group-hover:to-pink-400 group-hover:bg-clip-text transition-all">${art.name}</h3>
                         <div class="flex items-center justify-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -4057,7 +4144,7 @@
                 document.getElementById('communityUsers').innerHTML = users.map(u => `
                     <div class="flex items-center gap-3 p-3 bg-gradient-to-r from-white/5 to-transparent rounded-xl cursor-pointer hover:from-white/10 hover:to-white/5 transition-all duration-300 group border border-transparent hover:border-white/10" onclick="openUserProfile('${safeEncode(u.username)}')">
                         <div class="relative flex-shrink-0">
-                            <img src="${u.avatar || 'https://via.placeholder.com/150'}" class="w-12 h-12 rounded-full object-cover ring-2 ring-white/10 group-hover:ring-white/20 transition-all">
+                            <img src="${normalizeImageUrl(u.avatar, DEFAULT_AVATAR)}" class="w-12 h-12 rounded-full object-cover ring-2 ring-white/10 group-hover:ring-white/20 transition-all">
                             ${u.isOnline ? '<div class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-[#121212] rounded-full animate-pulse"></div>' : '<div class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-gray-600 border-2 border-[#121212] rounded-full"></div>'}
                         </div>
                         <div class="flex-1 min-w-0">
@@ -4256,7 +4343,7 @@
                         if (!u) return;
 
                         if (u.role) currentUser.role = u.role;
-                        if (u.avatar) currentUser.avatar = u.avatar;
+                        if (u.avatar) currentUser.avatar = normalizeImageUrl(u.avatar, DEFAULT_AVATAR);
                         if (u.banner) currentUser.banner = u.banner;
                         if (Array.isArray(u.following)) currentUser.following = u.following;
                         if (Array.isArray(u.likedAlbums)) currentUser.likedAlbums = u.likedAlbums;
@@ -4303,7 +4390,7 @@
                         username: u, 
                         role: role, 
                         following: d.following || [], 
-                        avatar: d.avatar,
+                        avatar: normalizeImageUrl(d.avatar, DEFAULT_AVATAR),
                         likedAlbums: d.likedAlbums || []
                     };
                     localStorage.setItem('musicAppUser', JSON.stringify(currentUser));
@@ -4320,7 +4407,7 @@
             console.log('👤 Role:', currentUser.role);
             document.getElementById('userInfo').innerText = currentUser.username;
             document.getElementById('userRole').innerText = currentUser.role || 'User';
-            document.getElementById('userAvatar').src = currentUser.avatar || DEFAULT_AVATAR;
+            document.getElementById('userAvatar').src = normalizeImageUrl(currentUser.avatar, DEFAULT_AVATAR);
             
             // Show admin panel if user is admin or superadmin
             const isAdmin = currentUser.role === 'admin' || currentUser.role === 'superadmin';
@@ -4427,7 +4514,7 @@
                 // Look up user objects from global 'users' list to find avatars
                 document.getElementById('userListContent').innerHTML = list.map(uName => {
                     const uObj = users.find(u => u.username === uName);
-                    const avatar = uObj ? (uObj.avatar || 'https://via.placeholder.com/150') : 'https://via.placeholder.com/150';
+                    const avatar = normalizeImageUrl(uObj?.avatar, DEFAULT_AVATAR);
                     
                     return `
                     <div class="flex items-center justify-between p-2 hover:bg-white/5 rounded-lg cursor-pointer" onclick="document.getElementById('userListModal').classList.add('hidden'); openUserProfile('${safeEncode(uName)}')">
@@ -4539,7 +4626,7 @@
 
             document.getElementById('profileName').innerText = data.username || username;
             document.getElementById('profileRole').innerText = data.role || 'user';
-            document.getElementById('profileAvatar').src = data.avatar || "https://via.placeholder.com/150";
+            document.getElementById('profileAvatar').src = normalizeImageUrl(data.avatar, DEFAULT_AVATAR);
             document.getElementById('profileBanner').src = data.banner || "https://images.unsplash.com/photo-1514525253440-b393332569ec?w=1200&q=80";
             
             // SHOW Stats for Users
@@ -4907,8 +4994,8 @@
             
             // All profiles combined
             const allProfiles = [
-                ...foundUsers.map(u => ({ type: 'user', name: u.username, avatar: u.avatar || 'https://via.placeholder.com/100' })),
-                ...foundArtists.map(a => ({ type: 'artist', name: a.name, avatar: a.avatar || 'https://via.placeholder.com/100' }))
+                ...foundUsers.map(u => ({ type: 'user', name: u.username, avatar: normalizeImageUrl(u.avatar, DEFAULT_AVATAR) })),
+                ...foundArtists.map(a => ({ type: 'artist', name: a.name, avatar: normalizeImageUrl(a.avatar, DEFAULT_AVATAR) }))
             ];
             
             // Update UI
@@ -4930,7 +5017,7 @@
                     songsSection.classList.remove('hidden');
                     songsList.innerHTML = foundSongs.map(song => `
                         <div onclick="playSong('${song.id}'); closeSearchPage();" class="flex items-center gap-4 p-3 hover:bg-white/10 rounded-xl cursor-pointer transition">
-                            <img src="${song.cover || 'https://via.placeholder.com/60'}" class="w-14 h-14 rounded-lg object-cover bg-gray-800">
+                            <img src="${normalizeImageUrl(song.cover, DEFAULT_COVER)}" class="w-14 h-14 rounded-lg object-cover bg-gray-800">
                             <div class="flex-1 min-w-0">
                                 <div class="text-sm font-bold text-white truncate">${song.title}</div>
                                 <div class="text-xs text-gray-400 truncate">${song.artist}</div>
@@ -5338,7 +5425,7 @@
             const id = document.getElementById('editPlaylistId').value; 
             const name = document.getElementById('editPlaylistName').value; 
             const coverInput = document.getElementById('editPlaylistCover').value; 
-            const cover = coverInput || "https://via.placeholder.com/300"; 
+            const cover = coverInput || DEFAULT_COVER; 
             await fetch(`${ACTIVE_SERVER}/playlists/${id}`, { 
                 method: 'PUT', 
                 headers: {'Content-Type': 'application/json'}, 
@@ -5371,7 +5458,7 @@
             
             content.innerHTML = myPlaylists.map(p => `
                 <div onclick="selectPlaylistForAdd('${p.id}')" class="p-3 bg-white/5 hover:bg-white/10 rounded-xl cursor-pointer flex items-center gap-3 transition">
-                    <img src="${p.cover || 'https://via.placeholder.com/150'}" class="w-10 h-10 rounded-lg object-cover">
+                    <img src="${normalizeImageUrl(p.cover, DEFAULT_COVER)}" class="w-10 h-10 rounded-lg object-cover">
                     <span class="font-bold text-sm">${p.name}</span>
                 </div>
             `).join('');
@@ -5509,7 +5596,7 @@
             const pl = playlists.find(p => p.id === id); if(!pl) return;
             window.currentAlbumName = null; // Clear album name for playlists
             document.getElementById('btnLikeAlbum').classList.add('hidden'); // Hide album like button for playlists
-            document.getElementById('plTitle').innerText = pl.name; document.getElementById('plOwner').innerText = `Par ${pl.owner}`; document.getElementById('plCover').src = pl.cover || "https://via.placeholder.com/300";
+            document.getElementById('plTitle').innerText = pl.name; document.getElementById('plOwner').innerText = `Par ${pl.owner}`; document.getElementById('plCover').src = normalizeImageUrl(pl.cover, DEFAULT_COVER);
             
             // 8. ADMIN PLAYLIST PERMISSIONS FIX
             const isOwner = pl.owner === currentUser.username || ['admin', 'superadmin'].includes(currentUser.role);
